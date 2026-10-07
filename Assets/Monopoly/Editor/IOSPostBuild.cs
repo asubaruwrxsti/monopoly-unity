@@ -21,6 +21,13 @@ namespace Monopoly.Editor
             root.SetString("NSLocalNetworkUsageDescription", "Monopoly connects to friends' games on your local network.");
             // No encryption beyond standard HTTPS, so App Store Connect won't ask on every upload.
             root.SetBoolean("ITSAppUsesNonExemptEncryption", false);
+
+            // iOS 27 requires the UIScene lifecycle; see Assets/Plugins/iOS/MonopolySceneDelegate.mm.
+            var manifest = root.CreateDict("UIApplicationSceneManifest");
+            manifest.SetBoolean("UIApplicationSupportsMultipleScenes", false);
+            var config = manifest.CreateDict("UISceneConfigurations").CreateArray("UIWindowSceneSessionRoleApplication").AddDict();
+            config.SetString("UISceneConfigurationName", "Default Configuration");
+            config.SetString("UISceneDelegateClassName", "MonopolySceneDelegate");
             plist.WriteToFile(plistPath);
         }
     }
