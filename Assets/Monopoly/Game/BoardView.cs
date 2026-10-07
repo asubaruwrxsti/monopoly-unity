@@ -147,7 +147,18 @@ namespace Monopoly.Game
             float boardSize = HalfBoard * 2 + Rim * 2;
             Box("Frame", new Vector3(0, -0.36f, 0), new Vector3(boardSize + 0.6f, 0.7f, boardSize + 0.6f), FrameColor, gloss: 0.5f);
             Box("Trim", new Vector3(0, -0.04f, 0), new Vector3(boardSize + 0.12f, 0.06f, boardSize + 0.12f), new Color32(232, 196, 92, 255), gloss: 0.8f, metallic: 0.6f);
-            Box("Board", new Vector3(0, -0.02f, 0), new Vector3(boardSize, 0.06f, boardSize), BoardColor);
+            Box("Board", new Vector3(0, -0.02f, 0), new Vector3(boardSize, 0.06f, boardSize), BoardColor, solid: true);
+
+            // Invisible rails keep the dice on the board.
+            float rail = boardSize / 2f + 0.1f;
+            for (int side = 0; side < 4; side++)
+            {
+                var wall = new GameObject("Dice Rail").AddComponent<BoxCollider>();
+                wall.transform.SetParent(transform, false);
+                wall.transform.localRotation = Quaternion.Euler(0, side * 90f, 0);
+                wall.transform.localPosition = wall.transform.localRotation * new Vector3(0, 1.5f, rail);
+                wall.size = new Vector3(boardSize + 0.4f, 3f, 0.2f);
+            }
 
             for (int i = 0; i < BoardLayout.SpaceCount; i++) BuildTile(i);
             BuildCentre();
@@ -166,12 +177,12 @@ namespace Monopoly.Game
             tile.Root = root;
 
             Vector2 size = TileSize(index) - new Vector2(Gap, Gap);
-            Box("Slab", new Vector3(0, TileTop / 2f, 0), new Vector3(size.x, TileTop, size.y), SlabColor, root, gloss: 0.3f);
+            Box("Slab", new Vector3(0, TileTop / 2f, 0), new Vector3(size.x, TileTop, size.y), SlabColor, root, gloss: 0.3f, solid: true);
 
             var face = GameObject.CreatePrimitive(PrimitiveType.Quad);
             face.name = "Face";
             face.transform.SetParent(root, false);
-            face.transform.localPosition = new Vector3(0, TileTop + 0.001f, 0);
+            face.transform.localPosition = new Vector3(0, TileTop + 0.004f, 0);
             face.transform.localRotation = Quaternion.Euler(90, 0, 0);
             face.transform.localScale = new Vector3(size.x, size.y, 1);
             var mat = new Material(unlitTemplate) { mainTexture = Resources.Load<Texture2D>("Tiles/" + def.Texture) };
@@ -198,7 +209,7 @@ namespace Monopoly.Game
 
         private void BuildCentre()
         {
-            var banner = Box("Banner", new Vector3(0, 0.05f, 0), new Vector3(6.6f, 0.1f, 1.6f), new Color32(214, 38, 46, 255), gloss: 0.6f);
+            var banner = Box("Banner", new Vector3(0, 0.05f, 0), new Vector3(6.6f, 0.1f, 1.6f), new Color32(214, 38, 46, 255), gloss: 0.6f, solid: true);
             banner.transform.localRotation = Quaternion.Euler(0, -45, 0);
             var bannerTrim = Box("Banner Trim", new Vector3(0, 0.03f, 0), new Vector3(6.8f, 0.06f, 1.8f), Color.white, gloss: 0.6f);
             bannerTrim.transform.localRotation = Quaternion.Euler(0, -45, 0);
@@ -227,21 +238,22 @@ namespace Monopoly.Game
             deck.SetParent(transform, false);
             deck.localPosition = position;
             deck.localRotation = Quaternion.Euler(0, yaw, 0);
-            Box("Stack", new Vector3(0, 0.08f, 0), new Vector3(1.3f, 0.16f, 1.95f), SlabColor, deck, gloss: 0.2f);
+            Box("Stack", new Vector3(0, 0.08f, 0), new Vector3(1.3f, 0.16f, 1.95f), SlabColor, deck, gloss: 0.2f, solid: true);
             var top = GameObject.CreatePrimitive(PrimitiveType.Quad);
             Destroy(top.GetComponent<Collider>());
             top.transform.SetParent(deck, false);
-            top.transform.localPosition = new Vector3(0, 0.161f, 0);
+            top.transform.localPosition = new Vector3(0, 0.164f, 0);
             top.transform.localRotation = Quaternion.Euler(90, 0, 0);
             top.transform.localScale = new Vector3(1.3f, 1.95f, 1);
             top.GetComponent<Renderer>().sharedMaterial = new Material(unlitTemplate) { mainTexture = Resources.Load<Texture2D>("Tiles/" + texture) };
         }
 
-        private GameObject Box(string name, Vector3 position, Vector3 scale, Color color, Transform parent = null, float gloss = 0.35f, float metallic = 0f)
+        /// <param name="solid">Keep the box collider so the physics dice bounce off it.</param>
+        private GameObject Box(string name, Vector3 position, Vector3 scale, Color color, Transform parent = null, float gloss = 0.35f, float metallic = 0f, bool solid = false)
         {
             var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
             box.name = name;
-            Destroy(box.GetComponent<Collider>());
+            if (!solid) Destroy(box.GetComponent<Collider>());
             box.transform.SetParent(parent != null ? parent : transform, false);
             box.transform.localPosition = position;
             box.transform.localScale = scale;
@@ -358,7 +370,7 @@ namespace Monopoly.Game
             var b = new GameObject("Building").transform;
             b.SetParent(parent, false);
             b.localPosition = basePos;
-            Box("Body", new Vector3(0, size.y / 2f, 0), size, color, b, gloss: 0.55f);
+            Box("Body", new Vector3(0, size.y / 2f, 0), size, color, b, gloss: 0.55f, solid: true);
             var roof = new GameObject("Roof");
             roof.transform.SetParent(b, false);
             roof.transform.localPosition = new Vector3(0, size.y, 0);
@@ -367,6 +379,9 @@ namespace Monopoly.Game
             var mat = new Material(litTemplate) { color = Color.Lerp(color, Color.black, 0.35f) };
             mat.SetFloat("_Glossiness", 0.5f);
             roof.AddComponent<MeshRenderer>().sharedMaterial = mat;
+            var roofCollider = roof.AddComponent<MeshCollider>();
+            roofCollider.sharedMesh = roofMesh;
+            roofCollider.convex = true;
             return b;
         }
 

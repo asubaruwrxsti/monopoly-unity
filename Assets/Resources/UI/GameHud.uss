@@ -366,24 +366,29 @@ Label {
 .chip {
     flex-direction: row;
     align-items: center;
-    width: 262px;
-    height: 104px;
-    margin: 0 8px;
-    padding: 6px 14px 6px 6px;
-    background-color: var(--paper);
-    border-radius: 54px;
-    border-bottom-width: 6px;
-    border-color: rgba(0, 0, 0, 0.15);
+    width: 250px;
+    height: 92px;
+    margin: 0 7px;
+    padding: 0 20px 0 6px;
+    background-color: rgba(255, 255, 255, 0.92);
+    border-radius: 46px;
+    border-width: 0;
+    border-bottom-width: 5px;
+    border-color: rgba(0, 0, 0, 0.12);
     transition-property: scale, translate;
     transition-duration: 0.3s;
     transition-timing-function: ease-out-back;
+}
+
+.chip:hover {
+    scale: 1.03 1.03;
 }
 
 .chip.active {
     scale: 1.08 1.08;
     translate: 0 6px;
     border-width: 4px;
-    border-bottom-width: 8px;
+    border-bottom-width: 7px;
     border-color: var(--gold);
 }
 
@@ -392,23 +397,30 @@ Label {
 }
 
 .chip__avatar {
-    width: 88px;
-    height: 88px;
-    border-radius: 44px;
+    width: 80px;
+    height: 80px;
+    border-radius: 40px;
     border-width: 5px;
     background-color: var(--paper-dim);
     -unity-background-scale-mode: scale-to-fit;
-    margin-right: 10px;
+    margin-right: 12px;
+    flex-shrink: 0;
 }
 
 .chip__info {
     flex-grow: 1;
     flex-shrink: 1;
+    justify-content: center;
     overflow: hidden;
 }
 
+.chip__info > Label {
+    margin: 0;
+    padding: 0;
+}
+
 .chip__name {
-    font-size: 20px;
+    font-size: 18px;
     color: var(--navy);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -419,27 +431,15 @@ Label {
     font-size: 30px;
     -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
     color: var(--green-dark);
+    margin-top: -2px;
 }
 
 .chip__status {
     font-size: 13px;
     color: var(--navy-soft);
-}
-
-.chip__deeds {
-    flex-direction: row;
-    flex-wrap: wrap;
-}
-
-.deed-pip {
-    width: 9px;
-    height: 12px;
-    border-radius: 2px;
-    margin: 1px 2px 0 0;
-}
-
-.deed-pip.mortgaged {
-    opacity: 0.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .money-float {
@@ -607,20 +607,22 @@ Label {
 
 .log-drawer {
     position: absolute;
-    top: 150px;
-    bottom: 150px;
+    top: 140px;
+    bottom: 120px;
     right: 18px;
     width: 420px;
-    background-color: rgba(255, 255, 255, 0.95);
-    border-radius: 24px;
+    background-color: rgba(255, 255, 255, 0.92);
+    border-radius: 28px;
     padding: 18px;
-    translate: 120% 0;
-    transition-property: translate;
-    transition-duration: 0.3s;
+    opacity: 0;
+    translate: 60px 0;
+    transition-property: translate, opacity;
+    transition-duration: 0.25s;
     transition-timing-function: ease-out;
 }
 
 .log-drawer.open {
+    opacity: 1;
     translate: 0 0;
 }
 
@@ -648,13 +650,14 @@ Label {
     bottom: 0;
     align-items: center;
     justify-content: center;
-    background-color: rgba(10, 20, 40, 0);
-    transition-property: background-color;
+    background-color: rgba(10, 20, 40, 0.45);
+    opacity: 0;
+    transition-property: opacity;
     transition-duration: 0.25s;
 }
 
 .modal-backdrop.open {
-    background-color: rgba(10, 20, 40, 0.45);
+    opacity: 1;
 }
 
 .modal {
@@ -796,4 +799,224 @@ Label {
 
 .message {
     width: 560px;
+}
+
+/* ---------------------------------------------------------------- frosted glass
+   HudController paints the blurred 3D scene (BlurCapture) into every .glass element's background, aligned
+   with the screen; the tint below decides how light or dark the glass is. Without the blur texture the
+   background colours act as a fallback. */
+.glass {
+    -unity-background-image-tint-color: rgb(255, 255, 255);
+}
+
+.glass.dark {
+    -unity-background-image-tint-color: rgb(58, 70, 98);
+}
+
+.glass.backdrop {
+    -unity-background-image-tint-color: rgb(120, 132, 158);
+}
+
+.status-pill.glass,
+.toast.glass {
+    color: rgb(255, 255, 255);
+}
+
+/* ---------------------------------------------------------------- player sheet */
+.sheet {
+    width: 760px;
+    max-height: 88%;
+}
+
+.sheet-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.sheet-avatar {
+    width: 110px;
+    height: 110px;
+    border-radius: 55px;
+    border-width: 6px;
+    background-color: var(--paper-dim);
+    -unity-background-scale-mode: scale-to-fit;
+    margin-right: 18px;
+}
+
+.sheet-header__text > .panel-title {
+    margin-bottom: 0;
+}
+
+.sheet-cash {
+    font-size: 30px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    color: var(--green-dark);
+}
+
+.sheet-list {
+    flex-shrink: 1;
+    max-height: 420px;
+    margin: 6px 0 12px 0;
+}
+
+.prop-row {
+    flex-direction: row;
+    align-items: center;
+    min-height: 52px;
+    padding: 4px 10px;
+    margin-bottom: 6px;
+    border-radius: 14px;
+    background-color: rgba(255, 255, 255, 0.6);
+}
+
+.prop-row__chip {
+    width: 14px;
+    height: 34px;
+    border-radius: 4px;
+    margin-right: 12px;
+}
+
+.prop-row__name {
+    flex-grow: 1;
+    font-size: 19px;
+}
+
+.prop-row__state {
+    font-size: 15px;
+    color: var(--navy-soft);
+}
+
+.prop-row.selectable:hover {
+    background-color: rgba(255, 255, 255, 0.85);
+}
+
+.prop-row.selected {
+    background-color: rgb(212, 240, 220);
+    border-width: 3px;
+    border-color: var(--green);
+}
+
+.prop-row.locked {
+    opacity: 0.4;
+}
+
+/* ---------------------------------------------------------------- trade */
+.trade {
+    width: 1040px;
+    max-height: 92%;
+}
+
+.trade-columns {
+    flex-direction: row;
+    flex-shrink: 1;
+    margin: 0 -8px;
+}
+
+.trade-col {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin: 0 8px;
+    padding: 12px;
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.45);
+}
+
+.trade-col__title {
+    font-size: 22px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    margin-bottom: 8px;
+}
+
+.trade-list {
+    flex-shrink: 1;
+    max-height: 330px;
+    min-height: 120px;
+}
+
+.stepper {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin-top: 8px;
+}
+
+.unity-button.btn.step {
+    width: 64px;
+    height: 56px;
+    padding: 0;
+    font-size: 30px;
+}
+
+.stepper__value {
+    min-width: 150px;
+    font-size: 32px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    color: var(--green-dark);
+    -unity-text-align: middle-center;
+}
+
+/* ---------------------------------------------------------------- phones: bigger touch targets */
+.mobile .unity-button.btn {
+    height: 64px;
+    font-size: 24px;
+}
+
+.mobile .unity-button.btn.big {
+    height: 82px;
+}
+
+.mobile .unity-button.btn.small {
+    height: 54px;
+    font-size: 19px;
+    padding: 0 14px;
+}
+
+.mobile .unity-button.btn.pill {
+    height: 62px;
+    font-size: 21px;
+    border-radius: 31px;
+    padding: 0 24px;
+}
+
+.mobile .unity-button.btn.step {
+    width: 76px;
+    height: 66px;
+}
+
+.mobile .unity-button.btn:hover,
+.mobile .chip:hover {
+    scale: 1 1;
+}
+
+.mobile .unity-button.arrow {
+    width: 58px;
+    height: 58px;
+    border-radius: 29px;
+    font-size: 28px;
+}
+
+.mobile .seat {
+    height: 98px;
+}
+
+.mobile .unity-text-field.field {
+    height: 66px;
+}
+
+.mobile .unity-base-text-field__input {
+    font-size: 26px;
+}
+
+.mobile .prop-row {
+    min-height: 64px;
+}
+
+.mobile .log-line {
+    font-size: 18px;
+}
+
+.mobile .corner-left,
+.mobile .corner-right {
+    bottom: 18px;
 }

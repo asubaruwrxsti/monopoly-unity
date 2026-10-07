@@ -329,6 +329,62 @@ namespace Monopoly.Tests
         }
 
         [Test]
+        public void Accepted_trade_swaps_properties_and_cash()
+        {
+            var game = NewGame();
+            game.SetOwner(1, 0);
+            game.SetOwner(39, 1);
+            var offer = new TradeOffer(0, 1, new[] { 1 }, new[] { 39 }, giveCash: 300, getCash: 0);
+            Assert.IsTrue(game.IsLegal(GameCommand.Trade(offer)));
+
+            game.Execute(GameCommand.Trade(offer));
+            Assert.AreEqual(TurnPhase.AwaitingTradeResponse, game.Phase);
+            Assert.AreEqual(1, game.ActingPlayerIndex);
+            Assert.IsFalse(game.IsLegal(new GameCommand(CommandType.Roll)), "Nothing else happens while a trade is pending");
+
+            game.Execute(new GameCommand(CommandType.AcceptTrade));
+            Assert.AreEqual(TurnPhase.AwaitingRoll, game.Phase);
+            Assert.AreEqual(0, game.GetProperty(39).Owner);
+            Assert.AreEqual(1, game.GetProperty(1).Owner);
+            Assert.AreEqual(1200, game.Players[0].Money);
+            Assert.AreEqual(1800, game.Players[1].Money);
+        }
+
+        [Test]
+        public void Rejected_trade_changes_nothing()
+        {
+            var game = NewGame();
+            game.SetOwner(39, 1);
+            game.Execute(GameCommand.Trade(new TradeOffer(0, 1, new int[0], new[] { 39 }, 100, 0)));
+            game.Execute(new GameCommand(CommandType.RejectTrade));
+            Assert.AreEqual(1, game.GetProperty(39).Owner);
+            Assert.AreEqual(1500, game.Players[0].Money);
+            Assert.AreEqual(TurnPhase.AwaitingRoll, game.Phase);
+        }
+
+        [Test]
+        public void Trades_with_buildings_or_unaffordable_cash_are_illegal()
+        {
+            var game = NewGame();
+            game.SetOwner(1, 1, houses: 1);
+            game.SetOwner(3, 1);
+            Assert.IsFalse(game.CanProposeTrade(new TradeOffer(0, 1, new int[0], new[] { 3 }, 100, 0)), "Group has a house");
+            Assert.IsFalse(game.CanProposeTrade(new TradeOffer(0, 1, new int[0], new int[0], 5000, 0)), "Can't give more cash than you have");
+            Assert.IsFalse(game.CanProposeTrade(new TradeOffer(0, 1, new int[0], new int[0], 0, 0)), "Empty offer");
+            Assert.IsFalse(game.CanProposeTrade(new TradeOffer(1, 0, new int[0], new int[0], 10, 0)), "Only the current player proposes");
+        }
+
+        [Test]
+        public void Cpu_refuses_to_complete_your_colour_set_cheaply()
+        {
+            var game = NewGame();
+            game.SetOwner(37, 0);
+            game.SetOwner(39, 1);
+            Assert.IsFalse(CpuPlayer.WouldAccept(game, new TradeOffer(0, 1, new int[0], new[] { 39 }, 450, 0)));
+            Assert.IsTrue(CpuPlayer.WouldAccept(game, new TradeOffer(0, 1, new int[0], new[] { 39 }, 1300, 0)));
+        }
+
+        [Test]
         public void Illegal_commands_are_rejected()
         {
             var game = NewGame();

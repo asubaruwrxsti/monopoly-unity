@@ -11,6 +11,31 @@ namespace Monopoly.Core
         /// <summary>Cash the CPU tries to keep in hand before spending on optional things.</summary>
         private const int Reserve = 150;
 
+        /// <summary>
+        /// Values each side of the offer from the CPU's point of view. Properties that complete a colour set are
+        /// worth much more to whoever ends up holding them, so the CPU won't hand you a monopoly cheaply.
+        /// </summary>
+        public static bool WouldAccept(MonopolyGame game, TradeOffer offer)
+        {
+            int me = offer.To, them = offer.From;
+            if (game.Players[me].Money < offer.GetCash) return false;
+
+            float Value(int space, int newOwner, int oldOwner)
+            {
+                var def = BoardLayout.Spaces[space];
+                float v = game.GetProperty(space).Mortgaged ? def.Price * 0.5f : def.Price;
+                var group = BoardLayout.SpacesInGroup(def.Group);
+                bool completes = group.All(i => i == space || game.GetProperty(i).Owner == newOwner
+                                                || offer.GiveProperties.Contains(i) && newOwner == me
+                                                || offer.GetProperties.Contains(i) && newOwner == them);
+                return completes && group.Count > 1 ? v * 2.5f : v;
+            }
+
+            float gained = offer.GiveCash + offer.GiveProperties.Sum(i => Value(i, me, them));
+            float given = offer.GetCash + offer.GetProperties.Sum(i => Value(i, them, me));
+            return gained >= given * 1.15f + 10f;
+        }
+
         public static GameCommand ChooseCommand(MonopolyGame game)
         {
             var me = game.CurrentPlayer;
@@ -38,6 +63,9 @@ namespace Monopoly.Core
                                        .ThenBy(i => BoardLayout.Spaces[i].MortgageValue).DefaultIfEmpty(-1).First();
                     if (mortgage >= 0) return new GameCommand(CommandType.Mortgage, mortgage);
                     return new GameCommand(CommandType.DeclareBankruptcy);
+
+                case TurnPhase.AwaitingTradeResponse:
+                    return new GameCommand(WouldAccept(game, game.PendingTrade) ? CommandType.AcceptTrade : CommandType.RejectTrade);
 
                 case TurnPhase.AwaitingEndTurn:
                     int unmortgage = game.OwnedSpaces(me.Id)

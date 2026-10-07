@@ -428,13 +428,49 @@ namespace Monopoly.Game
         {
             w.WriteValueSafe((byte)cmd.Type);
             w.WriteValueSafe(cmd.Space);
+            bool hasOffer = cmd.Offer != null;
+            w.WriteValueSafe(hasOffer);
+            if (!hasOffer) return;
+            var o = cmd.Offer;
+            w.WriteValueSafe(o.From);
+            w.WriteValueSafe(o.To);
+            w.WriteValueSafe(o.GiveCash);
+            w.WriteValueSafe(o.GetCash);
+            WriteSpaces(ref w, o.GiveProperties);
+            WriteSpaces(ref w, o.GetProperties);
         }
 
         private static GameCommand ReadCommand(ref FastBufferReader r)
         {
             r.ReadValueSafe(out byte type);
             r.ReadValueSafe(out int space);
-            return new GameCommand((CommandType)type, space);
+            r.ReadValueSafe(out bool hasOffer);
+            if (!hasOffer) return new GameCommand((CommandType)type, space);
+            r.ReadValueSafe(out int from);
+            r.ReadValueSafe(out int to);
+            r.ReadValueSafe(out int giveCash);
+            r.ReadValueSafe(out int getCash);
+            var give = ReadSpaces(ref r);
+            var get = ReadSpaces(ref r);
+            return new GameCommand((CommandType)type, space, new TradeOffer(from, to, give, get, giveCash, getCash));
+        }
+
+        private static void WriteSpaces(ref FastBufferWriter w, IReadOnlyList<int> spaces)
+        {
+            w.WriteValueSafe((byte)spaces.Count);
+            foreach (int s in spaces) w.WriteValueSafe((byte)s);
+        }
+
+        private static List<int> ReadSpaces(ref FastBufferReader r)
+        {
+            r.ReadValueSafe(out byte count);
+            var list = new List<int>(count);
+            for (int i = 0; i < count; i++)
+            {
+                r.ReadValueSafe(out byte s);
+                list.Add(s);
+            }
+            return list;
         }
 
         private static void WriteSeats(ref FastBufferWriter w, List<Seat> seats)

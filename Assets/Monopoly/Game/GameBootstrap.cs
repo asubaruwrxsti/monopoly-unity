@@ -32,6 +32,9 @@ namespace Monopoly.Game
             Time.timeScale = 1f;
             // Mobile defaults to 30 fps; the animations are made for 60.
             Application.targetFrameRate = 60;
+            // Physics only runs on demand: the dice simulate their throw ahead of time and replay it.
+            Physics.simulationMode = SimulationMode.Script;
+            Physics.gravity = new Vector3(0, -16f, 0);
             boardCamera = EnsureSceneBasics();
             board = BoardView.Create(transform);
             Scenery.Build(transform);
@@ -54,6 +57,7 @@ namespace Monopoly.Game
             }
             var director = cam.GetComponent<BoardCamera>();
             if (director == null) director = cam.gameObject.AddComponent<BoardCamera>();
+            if (cam.GetComponent<BlurCapture>() == null) cam.gameObject.AddComponent<BlurCapture>();
 
             // UI Toolkit routes Input System events through the EventSystem.
             if (FindFirstObjectByType<EventSystem>() == null)

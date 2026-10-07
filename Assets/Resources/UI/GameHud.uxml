@@ -5,7 +5,7 @@
         <!-- ============================================================ in-game HUD -->
         <ui:VisualElement name="hud" class="hud hidden" picking-mode="Ignore">
             <ui:VisualElement name="player-bar" class="player-bar" picking-mode="Ignore" />
-            <ui:Label name="toast" class="toast" picking-mode="Ignore" />
+            <ui:Label name="toast" class="toast glass dark" picking-mode="Ignore" />
 
             <ui:VisualElement name="announce" class="announce" picking-mode="Ignore">
                 <ui:Label name="announce-title" class="announce__title" picking-mode="Ignore" />
@@ -13,7 +13,7 @@
             </ui:VisualElement>
 
             <ui:VisualElement class="bottom" picking-mode="Ignore">
-                <ui:Label name="status-label" class="status-pill" picking-mode="Ignore" />
+                <ui:Label name="status-label" class="status-pill glass dark" picking-mode="Ignore" />
                 <ui:VisualElement name="secondary-actions" class="secondary-actions" picking-mode="Ignore">
                     <ui:Button name="pay-fine-btn" text="Pay $50" class="btn yellow" />
                     <ui:Button name="use-card-btn" text="Use Jail Card" class="btn yellow" />
@@ -39,7 +39,7 @@
                 <ui:Button name="leave-btn" text="Leave" class="btn white pill" />
             </ui:VisualElement>
 
-            <ui:VisualElement name="log-drawer" class="log-drawer">
+            <ui:VisualElement name="log-drawer" class="log-drawer glass hidden">
                 <ui:Label text="Game log" class="panel-title small" />
                 <ui:ScrollView name="log" class="log" />
             </ui:VisualElement>
@@ -47,7 +47,7 @@
 
         <!-- ============================================================ main menu -->
         <ui:VisualElement name="menu-screen" class="screen" picking-mode="Ignore">
-            <ui:VisualElement class="side-sheet">
+            <ui:VisualElement class="side-sheet glass">
                 <ui:VisualElement class="logo">
                     <ui:Label text="MONOPOLY" class="logo__text" />
                 </ui:VisualElement>
@@ -63,7 +63,7 @@
 
         <!-- ============================================================ host / join -->
         <ui:VisualElement name="connect-screen" class="screen hidden" picking-mode="Ignore">
-            <ui:VisualElement class="side-sheet">
+            <ui:VisualElement class="side-sheet glass">
                 <ui:Label name="connect-heading" text="Join a game" class="panel-title" />
                 <ui:Label text="Connection" class="field-label" />
                 <ui:VisualElement class="segmented">
@@ -83,7 +83,7 @@
 
         <!-- ============================================================ lobby -->
         <ui:VisualElement name="lobby-screen" class="screen hidden" picking-mode="Ignore">
-            <ui:VisualElement class="side-sheet wide">
+            <ui:VisualElement class="side-sheet wide glass">
                 <ui:Label name="lobby-heading" text="New game" class="panel-title" />
                 <ui:VisualElement name="lobby-code-box" class="code-box">
                     <ui:VisualElement>
@@ -107,8 +107,8 @@
         </ui:VisualElement>
 
         <!-- ============================================================ dialogs -->
-        <ui:VisualElement name="deed-modal" class="modal-backdrop hidden">
-            <ui:VisualElement class="modal deed">
+        <ui:VisualElement name="deed-modal" class="modal-backdrop glass backdrop hidden">
+            <ui:VisualElement class="modal deed glass">
                 <ui:VisualElement name="deed-image" class="deed-image" />
                 <ui:VisualElement class="deed-info">
                     <ui:Label name="deed-title" class="deed-title" />
@@ -124,8 +124,8 @@
             </ui:VisualElement>
         </ui:VisualElement>
 
-        <ui:VisualElement name="card-modal" class="modal-backdrop hidden">
-            <ui:VisualElement name="game-card" class="modal game-card">
+        <ui:VisualElement name="card-modal" class="modal-backdrop glass backdrop hidden">
+            <ui:VisualElement name="game-card" class="modal game-card glass">
                 <ui:Label name="card-header" class="game-card__header" />
                 <ui:VisualElement class="game-card__body">
                     <ui:Label name="card-player" class="hint centered" />
@@ -135,8 +135,8 @@
             </ui:VisualElement>
         </ui:VisualElement>
 
-        <ui:VisualElement name="manage-modal" class="modal-backdrop hidden">
-            <ui:VisualElement class="modal manage">
+        <ui:VisualElement name="manage-modal" class="modal-backdrop glass backdrop hidden">
+            <ui:VisualElement class="modal manage glass">
                 <ui:Label text="Your properties" class="panel-title" />
                 <ui:Label name="manage-summary" class="hint" />
                 <ui:ScrollView name="manage-list" class="manage-list" />
@@ -144,8 +144,8 @@
             </ui:VisualElement>
         </ui:VisualElement>
 
-        <ui:VisualElement name="message-modal" class="modal-backdrop hidden">
-            <ui:VisualElement class="modal message">
+        <ui:VisualElement name="message-modal" class="modal-backdrop glass backdrop hidden">
+            <ui:VisualElement class="modal message glass">
                 <ui:Label name="message-title" class="panel-title centered" />
                 <ui:Label name="message-text" class="hint centered" />
                 <ui:VisualElement class="row">
@@ -155,8 +155,60 @@
             </ui:VisualElement>
         </ui:VisualElement>
 
-        <ui:VisualElement name="busy-modal" class="modal-backdrop hidden">
-            <ui:VisualElement class="modal message">
+        <ui:VisualElement name="player-modal" class="modal-backdrop glass backdrop hidden">
+            <ui:VisualElement class="modal sheet glass">
+                <ui:VisualElement class="sheet-header">
+                    <ui:VisualElement name="player-avatar" class="sheet-avatar" />
+                    <ui:VisualElement class="sheet-header__text">
+                        <ui:Label name="player-name" class="panel-title" />
+                        <ui:Label name="player-cash" class="sheet-cash" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:ScrollView name="player-list" class="sheet-list" />
+                <ui:VisualElement class="row">
+                    <ui:Button name="player-close-btn" text="Close" class="btn gray" />
+                    <ui:Button name="player-trade-btn" text="Propose trade" class="btn blue" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="trade-modal" class="modal-backdrop glass backdrop hidden">
+            <ui:VisualElement class="modal trade glass">
+                <ui:Label name="trade-title" class="panel-title" />
+                <ui:VisualElement class="trade-columns">
+                    <ui:VisualElement class="trade-col">
+                        <ui:Label name="trade-give-label" class="trade-col__title" />
+                        <ui:ScrollView name="trade-give-list" class="trade-list" />
+                        <ui:VisualElement name="trade-give-stepper" class="stepper">
+                            <ui:Button name="trade-give-minus" text="-" class="btn gray step" />
+                            <ui:Label name="trade-give-cash" class="stepper__value" />
+                            <ui:Button name="trade-give-plus" text="+" class="btn gray step" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="trade-col">
+                        <ui:Label name="trade-get-label" class="trade-col__title" />
+                        <ui:ScrollView name="trade-get-list" class="trade-list" />
+                        <ui:VisualElement name="trade-get-stepper" class="stepper">
+                            <ui:Button name="trade-get-minus" text="-" class="btn gray step" />
+                            <ui:Label name="trade-get-cash" class="stepper__value" />
+                            <ui:Button name="trade-get-plus" text="+" class="btn gray step" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:Label name="trade-note" class="hint centered" />
+                <ui:VisualElement name="trade-propose-row" class="row">
+                    <ui:Button name="trade-cancel-btn" text="Cancel" class="btn gray" />
+                    <ui:Button name="trade-send-btn" text="Send offer" class="btn green" />
+                </ui:VisualElement>
+                <ui:VisualElement name="trade-answer-row" class="row">
+                    <ui:Button name="trade-reject-btn" text="Decline" class="btn red" />
+                    <ui:Button name="trade-accept-btn" text="Accept" class="btn green" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="busy-modal" class="modal-backdrop glass backdrop hidden">
+            <ui:VisualElement class="modal message glass">
                 <ui:Label name="busy-text" text="Connecting..." class="panel-title centered" />
             </ui:VisualElement>
         </ui:VisualElement>

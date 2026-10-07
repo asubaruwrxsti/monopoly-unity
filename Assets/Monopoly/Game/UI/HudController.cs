@@ -51,6 +51,24 @@ namespace Monopoly.Game
         private TurnPhase lastPhase = TurnPhase.GameOver;
         private int lastPhasePlayer = -1;
 
+        private float[] targetMoney = new float[0];
+
+        // player sheet & trading
+        private VisualElement playerModal, tradeModal, playerAvatar;
+        private Label playerName, playerCash, tradeTitle, tradeGiveLabel, tradeGetLabel, tradeGiveCash, tradeGetCash, tradeNote;
+        private ScrollView playerList, tradeGiveList, tradeGetList;
+        private Button playerTradeBtn, tradeSendBtn;
+        private VisualElement tradeProposeRow, tradeAnswerRow;
+        private int sheetPlayer = -1;
+        private int tradePartner = -1;
+        private readonly HashSet<int> tradeGive = new HashSet<int>();
+        private readonly HashSet<int> tradeGet = new HashSet<int>();
+        private int tradeGiveAmount, tradeGetAmount;
+        private TradeOffer answeredOffer;
+
+        /// <summary>Phone layout: bigger touch targets, no scrollbars. Forced on desktop with -mobileUI.</summary>
+        public static bool IsMobileLayout { get; private set; }
+
         // dialogs
         private VisualElement deedImage, deedGroup, deedRows;
         private Label deedTitle, deedNote;
@@ -76,7 +94,8 @@ namespace Monopoly.Game
             panel.themeStyleSheet = Resources.Load<ThemeStyleSheet>("UI/MonopolyTheme");
             panel.scaleMode = PanelScaleMode.ScaleWithScreenSize;
             panel.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
-            if (Application.isMobilePlatform)
+            IsMobileLayout = Application.isMobilePlatform || System.Environment.GetCommandLineArgs().Contains("-mobileUI");
+            if (IsMobileLayout)
             {
                 // Phones are small: lay out against a shorter reference so everything is bigger and tappable.
                 panel.referenceResolution = new Vector2Int(1500, 800);
@@ -200,7 +219,7 @@ namespace Monopoly.Game
                 () => Send(CommandType.DeclareBankruptcy), "Go bankrupt", showCancel: true));
             endTurnBtn = Btn("end-turn-btn", () => Send(CommandType.EndTurn));
             manageBtn = Btn("manage-btn", ShowManage);
-            Btn("log-btn", () => logDrawer.ToggleInClassList("open"));
+            Btn("log-btn", ToggleLog);
             speedBtn = Btn("speed-btn", CycleSpeed);
             Btn("leave-btn", () => ShowMessage("Leave the game?",
                 flow != null && flow.IsOnline ? "You'll disconnect from this online game." : "The current game will be lost.",
@@ -243,6 +262,56 @@ namespace Monopoly.Game
                 ok?.Invoke();
             });
             messageCancelBtn = Btn("message-cancel-btn", () => { messageOk = null; CloseModal(messageModal); });
+
+            // player sheet
+            playerModal = Q<VisualElement>("player-modal");
+            playerAvatar = Q<VisualElement>("player-avatar");
+            playerName = Q<Label>("player-name");
+            playerCash = Q<Label>("player-cash");
+            playerList = Q<ScrollView>("player-list");
+            Btn("player-close-btn", () => CloseModal(playerModal));
+            playerTradeBtn = Btn("player-trade-btn", () =>
+            {
+                CloseModal(playerModal);
+                OpenTradeBuilder(sheetPlayer);
+            });
+
+            // trading
+            tradeModal = Q<VisualElement>("trade-modal");
+            tradeTitle = Q<Label>("trade-title");
+            tradeGiveLabel = Q<Label>("trade-give-label");
+            tradeGetLabel = Q<Label>("trade-get-label");
+            tradeGiveCash = Q<Label>("trade-give-cash");
+            tradeGetCash = Q<Label>("trade-get-cash");
+            tradeNote = Q<Label>("trade-note");
+            tradeGiveList = Q<ScrollView>("trade-give-list");
+            tradeGetList = Q<ScrollView>("trade-get-list");
+            tradeProposeRow = Q<VisualElement>("trade-propose-row");
+            tradeAnswerRow = Q<VisualElement>("trade-answer-row");
+            Btn("trade-give-minus", () => StepCash(ref tradeGiveAmount, -50, flow.Game.Players[flow.Game.CurrentPlayerIndex].Money));
+            Btn("trade-give-plus", () => StepCash(ref tradeGiveAmount, 50, flow.Game.Players[flow.Game.CurrentPlayerIndex].Money));
+            Btn("trade-get-minus", () => StepCash(ref tradeGetAmount, -50, flow.Game.Players[tradePartner].Money));
+            Btn("trade-get-plus", () => StepCash(ref tradeGetAmount, 50, flow.Game.Players[tradePartner].Money));
+            Btn("trade-cancel-btn", () => CloseModal(tradeModal));
+            tradeSendBtn = Btn("trade-send-btn", () =>
+            {
+                CloseModal(tradeModal);
+                flow?.Request(GameCommand.Trade(BuildOffer()));
+            });
+            Btn("trade-accept-btn", () => { CloseModal(tradeModal); Send(CommandType.AcceptTrade); });
+            Btn("trade-reject-btn", () => { CloseModal(tradeModal); Send(CommandType.RejectTrade); });
+
+            // Phones scroll by dragging; scrollbars only get in the way.
+            if (IsMobileLayout)
+            {
+                root.AddToClassList("mobile");
+                root.Query<ScrollView>().ForEach(sv =>
+                {
+                    sv.verticalScrollerVisibility = ScrollerVisibility.Hidden;
+                    sv.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+                    sv.touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic;
+                });
+            }
         }
 
         private string PlayerName
@@ -458,6 +527,7 @@ namespace Monopoly.Game
             playerBar.Clear();
             chips.Clear();
             shownMoney = new float[flow.Game.Players.Count];
+            targetMoney = new float[flow.Game.Players.Count];
             for (int i = 0; i < flow.Game.Players.Count; i++)
             {
                 var color = SeatRules.PlayerColors[i % SeatRules.PlayerColors.Length];
@@ -478,17 +548,22 @@ namespace Monopoly.Game
                 money.AddToClassList("chip__money");
                 var status = new Label { name = "status" };
                 status.AddToClassList("chip__status");
-                var deeds = new VisualElement { name = "deeds" };
-                deeds.AddToClassList("chip__deeds");
                 info.Add(name);
                 info.Add(money);
                 info.Add(status);
-                info.Add(deeds);
                 chip.Add(info);
+                chip.AddToClassList("glass");
+
+                int player = i;
+                chip.AddManipulator(new Clickable(() =>
+                {
+                    Sfx.Play(SfxKind.Click);
+                    ShowPlayerSheet(player);
+                }));
 
                 playerBar.Add(chip);
                 chips.Add(chip);
-                shownMoney[i] = flow.Game.Players[i].Money;
+                shownMoney[i] = targetMoney[i] = flow.Game.Players[i].Money;
             }
             Refresh();
         }
@@ -513,12 +588,13 @@ namespace Monopoly.Game
         private void Update()
         {
             ApplySafeArea();
+            ApplyGlass();
             if (flow == null || flow.Game == null) return;
-            // Money counters roll toward their real values.
+            // Money counters roll toward the amounts the animation has reached (not the engine's final state).
             for (int i = 0; i < chips.Count && i < shownMoney.Length; i++)
             {
                 var p = flow.Game.Players[i];
-                float target = p.Money;
+                float target = targetMoney[i];
                 if (Mathf.Approximately(shownMoney[i], target)) continue;
                 shownMoney[i] = Mathf.MoveTowards(shownMoney[i], target, Mathf.Max(30f, Mathf.Abs(target - shownMoney[i]) * 4f) * Time.unscaledDeltaTime);
                 chips[i].Q<Label>("money").text = p.IsBankrupt ? "" : $"${Mathf.RoundToInt(shownMoney[i])}";
@@ -531,9 +607,21 @@ namespace Monopoly.Game
             var game = flow.Game;
             var current = game.CurrentPlayer;
 
+            if (!flow.IsPlaying)
+                for (int i = 0; i < targetMoney.Length; i++) targetMoney[i] = game.Players[i].Money;
             for (int i = 0; i < chips.Count; i++) RefreshChip(i);
 
-            bool mine = flow.LocalControlsSeat(game.CurrentPlayerIndex) && !game.IsOver;
+            // A trade offer waiting for a local player's answer.
+            if (game.Phase == TurnPhase.AwaitingTradeResponse && flow.CanLocalAct && answeredOffer != game.PendingTrade)
+            {
+                answeredOffer = game.PendingTrade;
+                ShowTradeOffer(game.PendingTrade);
+            }
+            if (game.Phase != TurnPhase.AwaitingTradeResponse && IsVisible(tradeAnswerRow) && IsVisible(tradeModal))
+                CloseModal(tradeModal);
+            if (IsVisible(playerModal) && sheetPlayer >= 0) FillPlayerSheet(sheetPlayer);
+
+            bool mine = flow.LocalControlsSeat(game.CurrentPlayerIndex) && !game.IsOver && game.Phase != TurnPhase.AwaitingTradeResponse;
             bool canAct = flow.CanLocalAct;
             statusLabel.text = StatusText(game, mine);
 
@@ -591,6 +679,11 @@ namespace Monopoly.Game
             var p = game.CurrentPlayer;
             if (game.IsOver) return $"{game.Winner.Name} wins!";
             if (flow.IsWaitingForHost) return "Sending to host...";
+            if (game.Phase == TurnPhase.AwaitingTradeResponse)
+            {
+                var partner = game.Players[game.PendingTrade.To];
+                return flow.LocalControlsSeat(partner.Id) ? $"{partner.Name}: {p.Name} offers you a trade" : $"Waiting for {partner.Name} to answer the trade...";
+            }
             if (!mine)
             {
                 var seat = flow.SeatList[game.CurrentPlayerIndex];
@@ -624,25 +717,26 @@ namespace Monopoly.Game
             var seat = flow.SeatList[i];
             string tag = seat.Kind == SeatKind.Cpu ? " (CPU)" : flow.LocalControlsSeat(i) && flow.IsOnline ? " (you)" : "";
             chip.Q<Label>("name").text = p.Name + tag;
-            if (Mathf.Approximately(shownMoney[i], p.Money)) chip.Q<Label>("money").text = p.IsBankrupt ? "" : $"${p.Money}";
+            if (Mathf.Approximately(shownMoney[i], targetMoney[i])) chip.Q<Label>("money").text = p.IsBankrupt ? "" : $"${Mathf.RoundToInt(targetMoney[i])}";
 
-            var owned = game.OwnedSpaces(p.Id).ToList();
-            chip.Q<Label>("status").text = p.IsBankrupt ? "Bankrupt" : p.InJail ? "In jail" : BoardLayout.Spaces[p.Position].Name;
+            int owned = game.OwnedSpaces(p.Id).Count();
+            string where = p.IsBankrupt ? "Bankrupt" : p.InJail ? "In jail" : BoardLayout.Spaces[p.Position].Name;
+            chip.Q<Label>("status").text = owned > 0 ? $"{where} · {owned} deed{(owned == 1 ? "" : "s")}" : where;
+        }
 
-            var deeds = chip.Q("deeds");
-            deeds.Clear();
-            foreach (int space in owned)
-            {
-                var pip = new VisualElement();
-                pip.AddToClassList("deed-pip");
-                pip.EnableInClassList("mortgaged", game.GetProperty(space).Mortgaged);
-                pip.style.backgroundColor = GroupColor(BoardLayout.Spaces[space].Group);
-                deeds.Add(pip);
-            }
+        public float TargetMoney(int playerId) => playerId >= 0 && playerId < targetMoney.Length ? targetMoney[playerId] : 0;
+
+        /// <summary>Moves a player's counter to <paramref name="balance"/>, optionally with a floating "+$200".</summary>
+        public void SetMoney(int playerId, float balance, bool showFloat)
+        {
+            if (playerId < 0 || playerId >= targetMoney.Length) return;
+            int delta = Mathf.RoundToInt(balance - targetMoney[playerId]);
+            targetMoney[playerId] = balance;
+            if (showFloat) FloatMoney(playerId, delta);
         }
 
         /// <summary>A "+$200" / "-$50" that floats down from the player's chip.</summary>
-        public void FloatMoney(int playerId, int delta)
+        private void FloatMoney(int playerId, int delta)
         {
             if (playerId < 0 || playerId >= chips.Count || delta == 0) return;
             var chip = chips[playerId];
@@ -883,7 +977,219 @@ namespace Monopoly.Game
 
         public bool IsBlockingBoardClicks =>
             IsVisible(deedModal) || IsVisible(cardModal) || IsVisible(manageModal) || IsVisible(messageModal) ||
-            IsVisible(busyModal) || !IsVisible(hud);
+            IsVisible(busyModal) || IsVisible(playerModal) || IsVisible(tradeModal) || !IsVisible(hud);
+
+        // ---------------------------------------------------------------- log, glass
+
+        internal void ToggleLog()
+        {
+            if (logDrawer.ClassListContains("open"))
+            {
+                logDrawer.RemoveFromClassList("open");
+                logDrawer.schedule.Execute(() =>
+                {
+                    if (!logDrawer.ClassListContains("open")) Hide(logDrawer);
+                }).StartingIn(260);
+            }
+            else
+            {
+                Show(logDrawer);
+                logDrawer.schedule.Execute(() => logDrawer.AddToClassList("open")).StartingIn(16);
+            }
+        }
+
+        /// <summary>
+        /// Fakes a backdrop blur: every visible .glass element draws the blurred 3D frame as its background,
+        /// sized to the whole screen and offset so the pixels line up with what's behind it.
+        /// </summary>
+        private void ApplyGlass()
+        {
+            var rt = BlurCapture.Texture;
+            var panel = document.rootVisualElement.panel;
+            if (rt == null || panel == null) return;
+            Rect screen = panel.visualTree.layout;
+            if (float.IsNaN(screen.width) || screen.width <= 0) return;
+            var size = new BackgroundSize(new Length(screen.width), new Length(screen.height));
+            root.Query(className: "glass").ForEach(e =>
+            {
+                if (e.resolvedStyle.display == DisplayStyle.None) return;
+                if (e.style.backgroundImage.value.renderTexture != rt) e.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(rt));
+                Rect wb = e.worldBound;
+                e.style.backgroundSize = size;
+                e.style.backgroundPositionX = new BackgroundPosition(BackgroundPositionKeyword.Left, new Length(-wb.x));
+                e.style.backgroundPositionY = new BackgroundPosition(BackgroundPositionKeyword.Top, new Length(-wb.y));
+            });
+        }
+
+        // ---------------------------------------------------------------- player sheet & trading
+
+        internal void ShowPlayerSheet(int player)
+        {
+            if (flow == null || flow.Game == null) return;
+            sheetPlayer = player;
+            FillPlayerSheet(player);
+            OpenModal(playerModal);
+        }
+
+        private void FillPlayerSheet(int player)
+        {
+            var game = flow.Game;
+            var p = game.Players[player];
+            var color = SeatRules.PlayerColors[player % SeatRules.PlayerColors.Length];
+            playerAvatar.style.backgroundImage = new StyleBackground(TokenPortraits.Get(flow.SeatList[player].Token));
+            playerAvatar.style.borderTopColor = playerAvatar.style.borderBottomColor = playerAvatar.style.borderLeftColor = playerAvatar.style.borderRightColor = color;
+            playerName.text = p.Name;
+            string extras = p.JailCards.Count > 0 ? $"  ·  {p.JailCards.Count} Get Out of Jail card{(p.JailCards.Count > 1 ? "s" : "")}" : "";
+            playerCash.text = p.IsBankrupt ? "Bankrupt" : $"${p.Money}  ·  worth ${game.NetWorth(p.Id)}{extras}";
+
+            playerList.Clear();
+            var owned = game.OwnedSpaces(p.Id).ToList();
+            if (owned.Count == 0)
+            {
+                var empty = new Label("No properties yet.");
+                empty.AddToClassList("manage-empty");
+                playerList.Add(empty);
+            }
+            foreach (int space in owned) playerList.Add(PropertyRow(space, selectable: false, selected: false, locked: false, null));
+
+            // You can trade with anyone else, on your own turn, when nothing else is pending.
+            int me = game.CurrentPlayerIndex;
+            bool canTrade = flow.CanLocalAct && player != me && !p.IsBankrupt && flow.LocalControlsSeat(me)
+                            && (game.Phase == TurnPhase.AwaitingRoll || game.Phase == TurnPhase.AwaitingEndTurn);
+            SetVisible(playerTradeBtn, canTrade);
+        }
+
+        private VisualElement PropertyRow(int space, bool selectable, bool selected, bool locked, Action onClick)
+        {
+            var def = BoardLayout.Spaces[space];
+            var st = flow.Game.GetProperty(space);
+            var row = new VisualElement();
+            row.AddToClassList("prop-row");
+            row.EnableInClassList("selectable", selectable);
+            row.EnableInClassList("selected", selected);
+            row.EnableInClassList("locked", locked);
+
+            var chip = new VisualElement();
+            chip.AddToClassList("prop-row__chip");
+            chip.style.backgroundColor = GroupColor(def.Group);
+            row.Add(chip);
+            var name = new Label(def.Name);
+            name.AddToClassList("prop-row__name");
+            row.Add(name);
+            string state = locked ? "Has buildings" : st.Mortgaged ? "Mortgaged" : st.HasHotel ? "Hotel" : st.Houses > 0 ? $"{st.Houses} house{(st.Houses > 1 ? "s" : "")}" : $"${def.Price}";
+            var stateLabel = new Label(state);
+            stateLabel.AddToClassList("prop-row__state");
+            row.Add(stateLabel);
+
+            if (selectable && !locked && onClick != null)
+                row.AddManipulator(new Clickable(() =>
+                {
+                    Sfx.Play(SfxKind.Click);
+                    onClick();
+                }));
+            return row;
+        }
+
+        internal void OpenTradeBuilder(int partner)
+        {
+            tradePartner = partner;
+            tradeGive.Clear();
+            tradeGet.Clear();
+            tradeGiveAmount = tradeGetAmount = 0;
+            SetVisible(tradeProposeRow, true);
+            SetVisible(tradeAnswerRow, false);
+            Q<VisualElement>("trade-give-stepper").Query<Button>().ForEach(b => SetVisible(b, true));
+            Q<VisualElement>("trade-get-stepper").Query<Button>().ForEach(b => SetVisible(b, true));
+            FillTradeBuilder();
+            OpenModal(tradeModal);
+        }
+
+        private void FillTradeBuilder()
+        {
+            var game = flow.Game;
+            int me = game.CurrentPlayerIndex;
+            tradeTitle.text = $"Trade with {game.Players[tradePartner].Name}";
+            tradeGiveLabel.text = "You give";
+            tradeGetLabel.text = "You get";
+            FillTradeColumn(tradeGiveList, me, tradeGive);
+            FillTradeColumn(tradeGetList, tradePartner, tradeGet);
+            tradeGiveCash.text = $"${tradeGiveAmount}";
+            tradeGetCash.text = $"${tradeGetAmount}";
+
+            var offer = BuildOffer();
+            tradeSendBtn.SetEnabled(game.CanProposeTrade(offer) && flow.CanLocalAct);
+            tradeNote.text = offer.IsEmpty ? "Tap properties and set cash to build an offer." :
+                             flow.SeatList[tradePartner].Kind == SeatKind.Cpu ? "Computer players take fair deals, but never hand over a colour set cheaply." :
+                             $"{game.Players[tradePartner].Name} will be asked to accept.";
+        }
+
+        /// <summary>Dev hook: pre-select trade items.</summary>
+        internal void SelectForTrade(int give, int get, int giveCash)
+        {
+            if (give >= 0) tradeGive.Add(give);
+            if (get >= 0) tradeGet.Add(get);
+            tradeGiveAmount = giveCash;
+            FillTradeBuilder();
+        }
+
+        internal void CloseDialogs()
+        {
+            foreach (var m in new[] { playerModal, tradeModal, manageModal, deedModal }) CloseModal(m);
+            if (logDrawer.ClassListContains("open")) ToggleLog();
+        }
+
+        private void FillTradeColumn(ScrollView list, int owner, HashSet<int> chosen)
+        {
+            list.Clear();
+            var owned = flow.Game.OwnedSpaces(owner).ToList();
+            if (owned.Count == 0)
+            {
+                var empty = new Label("No properties");
+                empty.AddToClassList("manage-empty");
+                list.Add(empty);
+            }
+            foreach (int space in owned)
+            {
+                int s = space;
+                bool locked = !flow.Game.IsTradable(owner, space);
+                list.Add(PropertyRow(space, selectable: true, selected: chosen.Contains(space), locked: locked, () =>
+                {
+                    if (!chosen.Remove(s)) chosen.Add(s);
+                    FillTradeBuilder();
+                }));
+            }
+        }
+
+        private void StepCash(ref int amount, int step, int max)
+        {
+            amount = Mathf.Clamp(amount + step, 0, Mathf.Max(0, max));
+            FillTradeBuilder();
+        }
+
+        private TradeOffer BuildOffer()
+            => new TradeOffer(flow.Game.CurrentPlayerIndex, tradePartner, tradeGive, tradeGet, tradeGiveAmount, tradeGetAmount);
+
+        /// <summary>Shows an incoming offer to the player who must answer it.</summary>
+        private void ShowTradeOffer(TradeOffer offer)
+        {
+            var game = flow.Game;
+            tradePartner = offer.From;
+            tradeTitle.text = $"{game.Players[offer.From].Name} offers {game.Players[offer.To].Name}";
+            tradeGiveLabel.text = "You get";
+            tradeGetLabel.text = "You give";
+            tradeGiveList.Clear();
+            tradeGetList.Clear();
+            foreach (int s in offer.GiveProperties) tradeGiveList.Add(PropertyRow(s, false, false, false, null));
+            foreach (int s in offer.GetProperties) tradeGetList.Add(PropertyRow(s, false, false, false, null));
+            tradeGiveCash.text = $"${offer.GiveCash}";
+            tradeGetCash.text = $"${offer.GetCash}";
+            Q<VisualElement>("trade-give-stepper").Query<Button>().ForEach(b => SetVisible(b, false));
+            Q<VisualElement>("trade-get-stepper").Query<Button>().ForEach(b => SetVisible(b, false));
+            tradeNote.text = flow.HasSeveralLocalHumans ? $"Pass the device to {game.Players[offer.To].Name}." : "";
+            SetVisible(tradeProposeRow, false);
+            SetVisible(tradeAnswerRow, true);
+            OpenModal(tradeModal);
+        }
 
         /// <summary>True if the screen position (pixels, origin bottom-left) is over an interactive UI element.</summary>
         public bool IsPointerOverUI(Vector2 screenPosition)

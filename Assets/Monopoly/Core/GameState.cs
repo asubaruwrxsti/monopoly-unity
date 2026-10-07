@@ -12,6 +12,8 @@ namespace Monopoly.Core
         AwaitingDebtPayment,
         /// <summary>Nothing left to resolve this turn.</summary>
         AwaitingEndTurn,
+        /// <summary>The current player offered a trade; <see cref="MonopolyGame.ActingPlayerIndex"/> must accept or reject it.</summary>
+        AwaitingTradeResponse,
         GameOver,
     }
 

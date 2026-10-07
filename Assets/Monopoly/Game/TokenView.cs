@@ -77,6 +77,12 @@ namespace Monopoly.Game
             view.motion = new GameObject("Motion").transform;
             view.motion.SetParent(root.transform, false);
             view.motion.localPosition = new Vector3(0, 0.024f, 0);
+            // Solid so the physics dice bounce off the pieces.
+            var body = root.AddComponent<CapsuleCollider>();
+            body.center = new Vector3(0, 0.28f, 0);
+            body.radius = 0.22f;
+            body.height = 0.56f;
+
             var built = TokenModels.Build(def, view.motion);
             view.model = built.Root.transform;
             view.animator = built.Animator;

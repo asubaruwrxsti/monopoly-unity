@@ -1,4 +1,8 @@
+using System;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.EnhancedTouch;
+using Touch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 
 namespace Monopoly.Game
 {
@@ -31,10 +35,105 @@ namespace Monopoly.Game
         private float yaw, pitch = 38f, distance = 18f, yawVelocity, pitchVelocity, distanceVelocity;
 
         private float shake;
+
+        // Player camera control layered on top of the director's shot: two-finger pan / pinch / twist on touch,
+        // right-drag / scroll wheel / Q-E on desktop. Eases back to the director's framing on ClearUserOffsets().
+        private Vector3 userPan, userPanGoal;
+        private float userZoom = 1f, userZoomGoal = 1f, userYaw, userYawGoal;
+
+        /// <summary>Returns true if a screen position is over UI that should swallow camera gestures.</summary>
+        public static Func<Vector2, bool> IsInputBlocked = _ => false;
+
+        /// <summary>True while the player is moving the camera, so taps don't fire.</summary>
+        public static bool IsGesturing { get; private set; }
         private float overviewCacheKey = float.NaN;
         private float overviewCacheDistance;
 
         public float Distance => distance;
+
+        private void OnEnable() => EnhancedTouchSupport.Enable();
+
+        /// <summary>Hand the camera back to the director (new turn, dice throw).</summary>
+        public void ClearUserOffsets()
+        {
+            userPanGoal = Vector3.zero;
+            userZoomGoal = 1f;
+            userYawGoal = 0f;
+        }
+
+        private void HandleGestures()
+        {
+            bool wasGesturing = IsGesturing;
+            IsGesturing = false;
+            float metersPerPixel = distance * 2f * Mathf.Tan(cam.fieldOfView * 0.5f * Mathf.Deg2Rad) / Mathf.Max(1, Screen.height);
+            Vector3 right = Quaternion.Euler(0, yaw + userYaw, 0) * Vector3.right;
+            Vector3 forward = Quaternion.Euler(0, yaw + userYaw, 0) * Vector3.forward;
+
+            var touches = Touch.activeTouches;
+            if (touches.Count >= 2)
+            {
+                var a = touches[0];
+                var b = touches[1];
+                if (!wasGesturing && (IsInputBlocked(a.startScreenPosition) || IsInputBlocked(b.startScreenPosition))) return;
+                IsGesturing = true;
+                Vector2 pa = a.screenPosition, pb = b.screenPosition;
+                Vector2 qa = pa - a.delta, qb = pb - b.delta;
+
+                Vector2 mid = (pa + pb) * 0.5f - (qa + qb) * 0.5f;
+                Pan(-(right * mid.x + forward * mid.y) * metersPerPixel);
+
+                float before = (qa - qb).magnitude, after = (pa - pb).magnitude;
+                if (before > 10f && after > 10f) Zoom(before / after);
+
+                float twist = Vector2.SignedAngle(qb - qa, pb - pa);
+                Rotate(-twist);
+                return;
+            }
+
+            var mouse = Mouse.current;
+            if (mouse == null) return;
+            Vector2 pos = mouse.position.ReadValue();
+            if (IsInputBlocked(pos)) return;
+            if (mouse.rightButton.isPressed)
+            {
+                IsGesturing = true;
+                Vector2 d = mouse.delta.ReadValue();
+                Pan(-(right * d.x + forward * d.y) * metersPerPixel);
+            }
+            float scroll = mouse.scroll.ReadValue().y;
+            if (Mathf.Abs(scroll) > 0.01f) Zoom(scroll > 0 ? 0.9f : 1.1f);
+            var keys = Keyboard.current;
+            if (keys != null)
+            {
+                if (keys.qKey.isPressed) Rotate(-90f * Time.unscaledDeltaTime);
+                if (keys.eKey.isPressed) Rotate(90f * Time.unscaledDeltaTime);
+            }
+        }
+
+        private void Pan(Vector3 delta)
+        {
+            userPanGoal += delta;
+            // Don't let the player scroll off into the forest.
+            Vector3 world = goalPivot + userPanGoal;
+            float limit = BoardView.HalfBoard + 1f;
+            world.x = Mathf.Clamp(world.x, -limit, limit);
+            world.z = Mathf.Clamp(world.z, -limit, limit);
+            userPanGoal = world - goalPivot;
+            userPanGoal.y = 0;
+            userPan = userPanGoal;
+        }
+
+        private void Zoom(float factor)
+        {
+            userZoomGoal = Mathf.Clamp(userZoomGoal * factor, 0.45f, 2.2f);
+            userZoom = userZoomGoal;
+        }
+
+        private void Rotate(float degrees)
+        {
+            userYawGoal += degrees;
+            userYaw = userYawGoal;
+        }
 
         private void Awake()
         {
@@ -143,7 +242,13 @@ namespace Monopoly.Game
             pitch = Mathf.SmoothDamp(pitch, goalPitch, ref pitchVelocity, smooth, Mathf.Infinity, dt);
             distance = Mathf.SmoothDamp(distance, goalDistance, ref distanceVelocity, smooth, Mathf.Infinity, dt);
 
-            Apply(pivot, yaw, pitch, distance);
+            HandleGestures();
+            float ease = 1f - Mathf.Exp(-dt * 3f);
+            userPan = Vector3.Lerp(userPan, userPanGoal, ease);
+            userZoom = Mathf.Lerp(userZoom, userZoomGoal, ease);
+            userYaw = Mathf.Lerp(userYaw, userYawGoal, ease);
+
+            Apply(pivot + userPan, yaw + userYaw, pitch, distance * userZoom);
 
             if (shake > 0.001f)
             {
@@ -153,7 +258,7 @@ namespace Monopoly.Game
                 shake = Mathf.MoveTowards(shake, 0f, dt * 1.5f);
             }
 
-            PostFx.SetFocusDistance(distance);
+            PostFx.SetFocusDistance(distance * userZoom);
         }
 
         private void Apply(Vector3 p, float y, float x, float d)

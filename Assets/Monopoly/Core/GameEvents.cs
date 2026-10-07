@@ -91,6 +91,19 @@ namespace Monopoly.Core
         public PlayerBankruptEvent(int playerId) { PlayerId = playerId; }
     }
 
+    public sealed class TradeProposedEvent : GameEvent
+    {
+        public TradeOffer Offer { get; }
+        public TradeProposedEvent(TradeOffer offer) { Offer = offer; }
+    }
+
+    public sealed class TradeResolvedEvent : GameEvent
+    {
+        public TradeOffer Offer { get; }
+        public bool Accepted { get; }
+        public TradeResolvedEvent(TradeOffer offer, bool accepted) { Offer = offer; Accepted = accepted; }
+    }
+
     public sealed class GameWonEvent : GameEvent
     {
         public int PlayerId { get; }

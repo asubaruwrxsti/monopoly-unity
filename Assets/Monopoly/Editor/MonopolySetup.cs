@@ -38,7 +38,7 @@ namespace Monopoly.Editor
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-            var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener), typeof(BoardCamera));
+            var camGo = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener), typeof(BoardCamera), typeof(BlurCapture));
             camGo.tag = "MainCamera";
             var layer = camGo.AddComponent<PostProcessLayer>();
             layer.Init(AssetDatabase.LoadAssetAtPath<PostProcessResources>("Packages/com.unity.postprocessing/PostProcessing/PostProcessResources.asset"));
@@ -75,6 +75,7 @@ namespace Monopoly.Editor
             CreateMaterial("Lit", "Standard", m => m.SetFloat("_Glossiness", 0.25f));
             CreateMaterial("Unlit", "Unlit/Texture", null);
             CreateMaterial("Glow", "Sprites/Default", null);
+            CreateMaterial("Blur", "Hidden/Monopoly/Blur", null);
             CreateMaterial("Particle", "Particles/Standard Unlit", m =>
             {
                 // Fade mode so particles can fade out over their lifetime.

@@ -33,6 +33,15 @@ namespace Monopoly.Core
         public IReadOnlyList<Debt> Debts => debts;
         public int DebtTotal => debts.Sum(d => d.Amount);
         public PlayerState Winner { get; private set; }
+        /// <summary>The trade awaiting a response, or null.</summary>
+        public TradeOffer PendingTrade { get; private set; }
+        private TurnPhase phaseBeforeTrade;
+
+        /// <summary>
+        /// The player whose decision the game is waiting for: normally the current player, but the trade partner
+        /// while a trade offer is pending.
+        /// </summary>
+        public int ActingPlayerIndex => Phase == TurnPhase.AwaitingTradeResponse ? PendingTrade.To : CurrentPlayerIndex;
 
         /// <param name="seed">Seed for dice and card shuffles; null for a random game.</param>
         /// <param name="rollDie">Optional dice override returning 1-6 (used by tests).</param>
@@ -240,6 +249,59 @@ namespace Monopoly.Core
                 if (mortgage >= 0) { MortgageFor(p, mortgage); continue; }
                 return;
             }
+        }
+
+        // ---------------------------------------------------------------- trading
+
+        /// <summary>Whether a property can change hands: owned by <paramref name="player"/>, no buildings in its group.</summary>
+        public bool IsTradable(int player, int space)
+        {
+            if (space < 0 || space >= BoardLayout.SpaceCount || properties[space] == null || properties[space].Owner != player) return false;
+            return BoardLayout.SpacesInGroup(BoardLayout.Spaces[space].Group).All(i => properties[i].Houses == 0);
+        }
+
+        public bool CanProposeTrade(TradeOffer o)
+        {
+            if (o == null || IsOver) return false;
+            if (Phase != TurnPhase.AwaitingRoll && Phase != TurnPhase.AwaitingEndTurn) return false;
+            if (o.From != CurrentPlayerIndex || o.To == o.From || o.To < 0 || o.To >= players.Count || players[o.To].IsBankrupt) return false;
+            if (o.IsEmpty || o.GiveCash < 0 || o.GetCash < 0) return false;
+            if (o.GiveCash > players[o.From].Money || o.GetCash > players[o.To].Money) return false;
+            return o.GiveProperties.All(i => IsTradable(o.From, i)) && o.GetProperties.All(i => IsTradable(o.To, i));
+        }
+
+        public void ProposeTrade(TradeOffer offer)
+        {
+            Require(CanProposeTrade(offer), "That trade isn't possible.");
+            PendingTrade = offer;
+            phaseBeforeTrade = Phase;
+            Phase = TurnPhase.AwaitingTradeResponse;
+            Emit(new TradeProposedEvent(offer));
+            Log($"{players[offer.From].Name} offered {players[offer.To].Name} a trade.", true);
+        }
+
+        public void RespondToTrade(bool accept)
+        {
+            Require(Phase == TurnPhase.AwaitingTradeResponse, "No trade is waiting for an answer.");
+            var o = PendingTrade;
+            PendingTrade = null;
+            Phase = phaseBeforeTrade;
+
+            var from = players[o.From];
+            var to = players[o.To];
+            if (!accept)
+            {
+                Emit(new TradeResolvedEvent(o, false));
+                Log($"{to.Name} turned down {from.Name}'s trade.", true);
+                return;
+            }
+
+            foreach (int i in o.GiveProperties) properties[i].Owner = to.Id;
+            foreach (int i in o.GetProperties) properties[i].Owner = from.Id;
+            if (o.GiveCash > 0) Transfer(from, o.GiveCash, to);
+            if (o.GetCash > 0) Transfer(to, o.GetCash, from);
+            Emit(new TradeResolvedEvent(o, true));
+            Log($"{to.Name} accepted {from.Name}'s trade.", true);
         }
 
         // ---------------------------------------------------------------- turn commands
@@ -693,6 +755,7 @@ namespace Monopoly.Core
                 void Mix(int v) => h = h * 31 + v;
 
                 Mix((int)Phase); Mix(CurrentPlayerIndex); Mix(Die1); Mix(Die2); Mix(PendingPurchase); Mix(DebtTotal);
+                Mix(PendingTrade != null ? PendingTrade.To * 1000 + PendingTrade.GiveCash + PendingTrade.GetCash : -1);
                 foreach (var p in players)
                 {
                     Mix(p.Money); Mix(p.Position); Mix(p.InJail ? 1 : 0); Mix(p.JailAttempts);

@@ -41,15 +41,25 @@ namespace Monopoly.Game
         public bool IsOnline => net != null;
         public bool IsAuthority => net == null || net.IsHost;
         public bool IsWaitingForHost { get; private set; }
+        /// <summary>True while engine events are being animated (the engine is ahead of what's on screen).</summary>
+        public bool IsPlaying => playing;
         private ulong LocalId => net != null ? net.LocalId : SeatRules.LocalOwner;
 
         public bool HasSeveralLocalHumans => seats.Count(s => s.Kind == SeatKind.Human && s.Owner == LocalId) > 1;
 
         public bool LocalControlsSeat(int index) => seats[index].Kind == SeatKind.Human && seats[index].Owner == LocalId;
 
-        /// <summary>The local user may issue a command right now.</summary>
+        /// <summary>The local user may issue a command right now (for the current player, or as a trade partner).</summary>
         public bool CanLocalAct => Game != null && introDone && !playing && !IsWaitingForHost && !Game.IsOver
-                                   && LocalControlsSeat(Game.CurrentPlayerIndex);
+                                   && LocalControlsSeat(Game.ActingPlayerIndex);
+
+        /// <summary>Passing GO is celebrated as the token crosses it; the engine's later events then only settle the money.</summary>
+        private readonly HashSet<int> goPresented = new HashSet<int>();
+
+        // Tap detection for the board (a tap opens the tile's deed; drags and pinches move the camera).
+        private Vector2 pressPosition;
+        private float pressTime;
+        private bool pressCandidate;
 
         public void Begin(int seed, List<Seat> seatList, NetSession session, BoardView boardView, HudController hudController,
                           BoardCamera director, DiceView diceView, Effects effects)
@@ -149,7 +159,7 @@ namespace Monopoly.Game
         /// <summary>Authority only: validate and apply a command, then share it with clients.</summary>
         private string Authorize(GameCommand cmd, ulong sender, bool fromCpu)
         {
-            var seat = seats[Game.CurrentPlayerIndex];
+            var seat = seats[Game.ActingPlayerIndex];
             bool allowed = fromCpu ? seat.Kind == SeatKind.Cpu : seat.Kind == SeatKind.Human && seat.Owner == sender;
             if (!allowed) return "It's not your turn.";
             if (!Game.IsLegal(cmd)) return "That move isn't allowed right now.";
@@ -249,7 +259,7 @@ namespace Monopoly.Game
                         hud.ShowMessage($"{Game.Winner.Name} wins!", "Everyone else has gone bankrupt.", FindFirstObjectByType<GameBootstrap>().LeaveToMenu, "Back to menu");
                     }
                 }
-                else if (IsAuthority && seats[Game.CurrentPlayerIndex].Kind == SeatKind.Cpu)
+                else if (IsAuthority && seats[Game.ActingPlayerIndex].Kind == SeatKind.Cpu)
                 {
                     cpuTimer += Time.deltaTime;
                     if (cpuTimer >= cpuDelay)
@@ -272,6 +282,7 @@ namespace Monopoly.Game
             switch (e)
             {
                 case TurnStartedEvent turn:
+                    boardCamera.ClearUserOffsets();
                     for (int i = 0; i < tokens.Length; i++) tokens[i].SetHighlighted(i == turn.PlayerId);
                     FollowPlayer(turn.PlayerId, 1.15f);
                     if (LocalControlsSeat(turn.PlayerId))
@@ -291,14 +302,27 @@ namespace Monopoly.Game
                     break;
 
                 case PassedGoEvent go:
-                    hud.Announce("PASS GO!", $"+${BoardLayout.GoSalary}", 1.3f);
-                    Sfx.Play(SfxKind.CashRegister);
-                    StartCoroutine(fx.CoinRain(TokenPosition(go.PlayerId)));
-                    yield return new WaitForSeconds(0.3f);
+                    if (!goPresented.Contains(go.PlayerId))
+                    {
+                        PresentPassGo(go.PlayerId);
+                        yield return new WaitForSeconds(0.3f);
+                    }
                     break;
 
                 case MoneyChangedEvent money:
-                    hud.FloatMoney(money.PlayerId, money.Delta);
+                    if (goPresented.Remove(money.PlayerId) && money.Delta == BoardLayout.GoSalary)
+                        hud.SetMoney(money.PlayerId, money.Balance, showFloat: false); // already shown as the token crossed GO
+                    else
+                        hud.SetMoney(money.PlayerId, money.Balance, showFloat: true);
+                    break;
+
+                case TradeProposedEvent proposed:
+                    hud.ShowToast($"{Game.Players[proposed.Offer.From].Name} offers {Game.Players[proposed.Offer.To].Name} a trade");
+                    Sfx.Play(SfxKind.Card);
+                    break;
+
+                case TradeResolvedEvent resolved:
+                    yield return TradeResolved(resolved);
                     break;
 
                 case PaymentEvent payment:
@@ -351,6 +375,7 @@ namespace Monopoly.Game
             Vector3 from = tokenPos + Vector3.up * 1.2f - inward * 0.6f;
             float yaw = BoardCamera.SideYaw(Game.Players[roll.PlayerId].Position);
 
+            boardCamera.ClearUserOffsets();
             boardCamera.Focus(Vector3.Lerp(tokenPos, landing, 0.6f), yaw, 6.2f, 52f);
             yield return dice.Throw(roll.Die1, roll.Die2, from, landing, () => boardCamera.Shake(0.12f));
             bool doubles = roll.Die1 == roll.Die2;
@@ -395,6 +420,9 @@ namespace Monopoly.Game
             yield return token.MoveAlong(path, perSpace, i =>
             {
                 int space = spaces[i];
+                // Celebrate GO the moment the token crosses it, not after it has finished moving.
+                if (space == 0 && move.Kind == MoveKind.Forward && goPresented.Add(move.PlayerId))
+                    PresentPassGo(move.PlayerId);
                 board.BounceTile(space, i == spaces.Count - 1 ? 0.07f : 0.035f);
                 Sfx.Play(SfxKind.Hop, 0.6f, 0.9f + (i % 4) * 0.06f);
                 boardCamera.Follow(token.transform, BoardCamera.SideYaw(space), i == spaces.Count - 1 ? 0.9f : 1f);
@@ -405,6 +433,35 @@ namespace Monopoly.Game
                         SeatRules.PlayerColors[move.PlayerId]);
             dice.HideSoon(1.2f);
             yield return new WaitForSeconds(0.15f);
+        }
+
+        private void PresentPassGo(int playerId)
+        {
+            hud.Announce("PASS GO!", $"+${BoardLayout.GoSalary}", 1.3f);
+            hud.SetMoney(playerId, hud.TargetMoney(playerId) + BoardLayout.GoSalary, showFloat: true);
+            Sfx.Play(SfxKind.CashRegister);
+            StartCoroutine(fx.CoinRain(TokenPosition(playerId)));
+        }
+
+        private IEnumerator TradeResolved(TradeResolvedEvent resolved)
+        {
+            var o = resolved.Offer;
+            if (!resolved.Accepted)
+            {
+                hud.Announce("NO DEAL", Game.Players[o.To].Name + " said no", 1.2f);
+                Sfx.Play(SfxKind.Sad, 0.6f);
+                yield return tokens[o.From].React(TokenReaction.Hurt);
+                yield break;
+            }
+
+            hud.Announce("DEAL!", $"{Game.Players[o.From].Name} & {Game.Players[o.To].Name}", 1.4f);
+            Sfx.Play(SfxKind.Fanfare, 0.7f);
+            foreach (int space in o.GiveProperties) StartCoroutine(board.AnimatePurchase(space, o.To));
+            foreach (int space in o.GetProperties) StartCoroutine(board.AnimatePurchase(space, o.From));
+            fx.Confetti(TokenPosition(o.From));
+            fx.Confetti(TokenPosition(o.To));
+            tokens[o.To].StartCoroutine(tokens[o.To].React(TokenReaction.Celebrate));
+            yield return tokens[o.From].React(TokenReaction.Celebrate);
         }
 
         private IEnumerator Purchase(PropertyBoughtEvent bought)
@@ -458,17 +515,33 @@ namespace Monopoly.Game
 
         // ---------------------------------------------------------------- board clicks
 
+        /// <summary>A quick tap (not a drag, not a two-finger gesture) on a tile opens its deed.</summary>
         private void Update()
         {
             if (Game == null || cam == null) return;
             var pointer = Pointer.current;
-            if (pointer == null || !pointer.press.wasPressedThisFrame) return;
-            if (hud.IsBlockingBoardClicks) return;
-
+            if (pointer == null) return;
             Vector2 pos = pointer.position.ReadValue();
-            if (hud.IsPointerOverUI(pos)) return;
-            if (Physics.Raycast(cam.ScreenPointToRay(pos), out var hit, 200f) && board.TryGetTile(hit.collider, out int space))
-                hud.ShowDeed(space, purchase: false);
+
+            if (pointer.press.wasPressedThisFrame)
+            {
+                pressCandidate = !hud.IsBlockingBoardClicks && !hud.IsPointerOverUI(pos);
+                pressPosition = pos;
+                pressTime = Time.unscaledTime;
+            }
+            if (BoardCamera.IsGesturing || (pointer.press.isPressed && (pos - pressPosition).sqrMagnitude > 30f * 30f))
+                pressCandidate = false;
+            if (!pointer.press.wasReleasedThisFrame || !pressCandidate) return;
+            pressCandidate = false;
+            if (Time.unscaledTime - pressTime > 0.45f || hud.IsBlockingBoardClicks) return;
+
+            Physics.SyncTransforms();
+            foreach (var hit in Physics.RaycastAll(cam.ScreenPointToRay(pos), 200f))
+                if (board.TryGetTile(hit.collider, out int space))
+                {
+                    hud.ShowDeed(space, purchase: false);
+                    return;
+                }
         }
     }
 }

@@ -31,6 +31,8 @@ namespace Monopoly.Game
             var dev = new GameObject("DevAutoplay").AddComponent<DevAutoplay>();
             dev.mode = args[i + 1];
             dev.outDir = args[i + 2];
+            // On devices, relative paths go to the app's own storage.
+            if (!Path.IsPathRooted(dev.outDir)) dev.outDir = Path.Combine(Application.persistentDataPath, dev.outDir);
             Directory.CreateDirectory(dev.outDir);
             DontDestroyOnLoad(dev.gameObject);
         }
@@ -48,6 +50,7 @@ namespace Monopoly.Game
             {
                 case "local": yield return Local(); break;
                 case "tokens": yield return Tokens(); break;
+                case "corners": yield return Corners(); break;
                 case "host": yield return Host(); break;
                 case "join": yield return Join(); break;
             }
@@ -101,7 +104,33 @@ namespace Monopoly.Game
                         hud.ShowManage();
                         yield return new WaitForSeconds(0.5f);
                         Shot("09-manage");
+                        yield return null;
+                        hud.CloseDialogs();
+
+                        // Another player's properties, then a trade offer to them.
+                        int me = flow.Game.CurrentPlayerIndex;
+                        int other = Enumerable.Range(0, flow.Game.Players.Count).Where(i => i != me)
+                                              .OrderByDescending(i => flow.Game.OwnedSpaces(i).Count()).First();
                         yield return new WaitForSeconds(0.3f);
+                        hud.ShowPlayerSheet(other);
+                        yield return new WaitForSeconds(0.6f);
+                        Shot("09b-player-sheet");
+                        yield return null;
+                        hud.CloseDialogs();
+                        yield return new WaitForSeconds(0.3f);
+                        hud.OpenTradeBuilder(other);
+                        hud.SelectForTrade(flow.Game.OwnedSpaces(me).First(), flow.Game.OwnedSpaces(other).DefaultIfEmpty(-1).First(), 100);
+                        yield return new WaitForSeconds(0.6f);
+                        Shot("09c-trade");
+                        yield return null;
+                        hud.CloseDialogs();
+                        yield return new WaitForSeconds(0.3f);
+                        hud.ToggleLog();
+                        yield return new WaitForSeconds(0.6f);
+                        Shot("09d-log");
+                        yield return null;
+                        hud.CloseDialogs();
+                        yield return new WaitForSeconds(0.4f);
                     }
                     var cmd = CpuPlayer.ChooseCommand(flow.Game);
                     flow.Request(cmd);
@@ -121,6 +150,19 @@ namespace Monopoly.Game
             yield return new WaitForSeconds(1f);
             Shot("11-midgame");
             LogState();
+        }
+
+        /// <summary>Close-ups of each board corner, to check the tiles meet cleanly.</summary>
+        private IEnumerator Corners()
+        {
+            var cam = FindFirstObjectByType<BoardCamera>();
+            foreach (int corner in new[] { 0, 10, 20, 30 })
+            {
+                cam.Focus(BoardView.TileCenter(corner), 0f, 4.2f, 62f);
+                yield return new WaitForSeconds(2.5f);
+                Shot($"02-corner-{corner}");
+                yield return null;
+            }
         }
 
         /// <summary>Lines up the tokens not shown in the local run, and plays each one's celebration.</summary>
@@ -173,10 +215,27 @@ namespace Monopoly.Game
         {
             Time.timeScale = 3f;
             float end = Time.realtimeSinceStartup + seconds;
+            bool traded = false;
             while (Time.realtimeSinceStartup < end && (flow.Game == null || !flow.Game.IsOver))
             {
                 hud.DismissCard();
-                if (flow.CanLocalAct) flow.Request(CpuPlayer.ChooseCommand(flow.Game));
+                var g = flow.Game;
+                // The host offers the online guest cash for one of their properties, once, to test trades over the network.
+                if (!traded && mode == "host" && flow.CanLocalAct && g.Phase == TurnPhase.AwaitingEndTurn)
+                {
+                    int guest = 1;
+                    int want = g.OwnedSpaces(guest).Where(i => g.IsTradable(guest, i)).DefaultIfEmpty(-1).First();
+                    var offer = new TradeOffer(g.CurrentPlayerIndex, guest, new int[0], want >= 0 ? new[] { want } : new int[0], Mathf.Min(400, g.CurrentPlayer.Money), 0);
+                    if (want >= 0 && g.CanProposeTrade(offer))
+                    {
+                        traded = true;
+                        Debug.Log($"[DevAutoplay] proposing trade for space {want}");
+                        flow.Request(GameCommand.Trade(offer));
+                        yield return new WaitForSecondsRealtime(0.3f);
+                        continue;
+                    }
+                }
+                if (flow.CanLocalAct) flow.Request(CpuPlayer.ChooseCommand(g));
                 yield return new WaitForSecondsRealtime(0.2f);
             }
             Time.timeScale = 1f;

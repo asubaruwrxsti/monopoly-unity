@@ -14,6 +14,9 @@ namespace Monopoly.Core
         SellHouse,
         Mortgage,
         Unmortgage,
+        ProposeTrade,
+        AcceptTrade,
+        RejectTrade,
     }
 
     /// <summary>
@@ -25,12 +28,17 @@ namespace Monopoly.Core
         public CommandType Type { get; }
         /// <summary>Target space for property-management commands, otherwise -1.</summary>
         public int Space { get; }
+        /// <summary>The offer for <see cref="CommandType.ProposeTrade"/>, otherwise null.</summary>
+        public TradeOffer Offer { get; }
 
-        public GameCommand(CommandType type, int space = -1)
+        public GameCommand(CommandType type, int space = -1, TradeOffer offer = null)
         {
             Type = type;
             Space = space;
+            Offer = offer;
         }
+
+        public static GameCommand Trade(TradeOffer offer) => new GameCommand(CommandType.ProposeTrade, -1, offer);
 
         public override string ToString() => Space >= 0 ? $"{Type}({Space})" : Type.ToString();
     }
@@ -39,7 +47,8 @@ namespace Monopoly.Core
     {
         public static bool IsLegal(this MonopolyGame game, GameCommand cmd)
         {
-            bool validSpace = cmd.Space >= 0 && cmd.Space < BoardLayout.SpaceCount && game.GetProperty(cmd.Space) != null;
+            bool validSpace = cmd.Space >= 0 && cmd.Space < BoardLayout.SpaceCount && game.GetProperty(cmd.Space) != null
+                              && game.Phase != TurnPhase.AwaitingTradeResponse;
             switch (cmd.Type)
             {
                 case CommandType.Roll: return game.CanRoll;
@@ -54,6 +63,9 @@ namespace Monopoly.Core
                 case CommandType.SellHouse: return validSpace && game.CanSellHouse(cmd.Space);
                 case CommandType.Mortgage: return validSpace && game.CanMortgage(cmd.Space);
                 case CommandType.Unmortgage: return validSpace && game.CanUnmortgage(cmd.Space);
+                case CommandType.ProposeTrade: return game.CanProposeTrade(cmd.Offer);
+                case CommandType.AcceptTrade:
+                case CommandType.RejectTrade: return game.Phase == TurnPhase.AwaitingTradeResponse;
                 default: return false;
             }
         }
@@ -74,6 +86,9 @@ namespace Monopoly.Core
                 case CommandType.SellHouse: game.SellHouse(cmd.Space); break;
                 case CommandType.Mortgage: game.Mortgage(cmd.Space); break;
                 case CommandType.Unmortgage: game.Unmortgage(cmd.Space); break;
+                case CommandType.ProposeTrade: game.ProposeTrade(cmd.Offer); break;
+                case CommandType.AcceptTrade: game.RespondToTrade(true); break;
+                case CommandType.RejectTrade: game.RespondToTrade(false); break;
             }
         }
     }
