@@ -63,5 +63,6 @@ Thumbs.db
 # Plastic SCM
 .plastic/
 
-# Large scene files
-Assets/Scenes/Prototype 1.unity
+
+# Unity Android build scratch files
+.utmp/

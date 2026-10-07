@@ -1,0 +1,21 @@
+{
+    "name": "Monopoly.Editor",
+    "rootNamespace": "Monopoly.Editor",
+    "references": [
+        "Monopoly.Core",
+        "Monopoly.Game",
+        "Unity.Postprocessing.Runtime",
+        "Unity.Postprocessing.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

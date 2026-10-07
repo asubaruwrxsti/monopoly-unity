@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#7fb6e8">
+  <title>{{{ PRODUCT_NAME }}}</title>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #7fb6e8; touch-action: none; }
+    #unity-canvas { width: 100%; height: 100%; display: block; background: #7fb6e8; outline: none; }
+    #loading {
+      position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #1d2a44;
+      background: radial-gradient(circle at 50% 40%, #b9dcf5, #7fb6e8);
+    }
+    .logo {
+      background: #d6262e; color: #fff; font-weight: 900; font-size: clamp(36px, 8vw, 64px); letter-spacing: 3px;
+      padding: 6px 28px; border-radius: 16px; border: 5px solid #fff; border-bottom-width: 10px;
+      transform: rotate(-3deg); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+    }
+    .bar { margin-top: 32px; width: min(320px, 70vw); height: 14px; border-radius: 7px; background: rgba(255, 255, 255, 0.55); overflow: hidden; }
+    .fill { height: 100%; width: 0; background: #3dbe5b; border-radius: 7px; transition: width 0.2s; }
+    .hint { margin-top: 14px; font-size: 14px; opacity: 0.7; }
+    #rotate { display: none; }
+    @media (orientation: portrait) and (max-width: 900px) {
+      #rotate { display: flex; position: fixed; inset: 0; z-index: 10; align-items: center; justify-content: center;
+                background: #7fb6e8; color: #1d2a44; font: 600 20px system-ui, sans-serif; text-align: center; padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="unity-canvas" tabindex="-1"></canvas>
+  <div id="loading">
+    <div class="logo">MONOPOLY</div>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+    <div class="hint" id="hint">Loading...</div>
+  </div>
+  <div id="rotate">Turn your phone sideways to play.</div>
+  <script>
+    const canvas = document.querySelector("#unity-canvas");
+    const config = {
+      dataUrl: "Build/{{{ DATA_FILENAME }}}",
+      frameworkUrl: "Build/{{{ FRAMEWORK_FILENAME }}}",
+#if USE_THREADS
+      workerUrl: "Build/{{{ WORKER_FILENAME }}}",
+#endif
+#if USE_WASM
+      codeUrl: "Build/{{{ CODE_FILENAME }}}",
+#endif
+#if MEMORY_FILENAME
+      memoryUrl: "Build/{{{ MEMORY_FILENAME }}}",
+#endif
+#if SYMBOLS_FILENAME
+      symbolsUrl: "Build/{{{ SYMBOLS_FILENAME }}}",
+#endif
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
+      productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
+      productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+      // Cap the pixel ratio: rendering a phone browser at 3x costs a lot for little visible gain.
+      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+    };
+    const script = document.createElement("script");
+    script.src = "Build/{{{ LOADER_FILENAME }}}";
+    script.onload = () => {
+      createUnityInstance(canvas, config, (progress) => {
+        document.querySelector("#fill").style.width = (progress * 100) + "%";
+      }).then(() => {
+        document.querySelector("#loading").remove();
+      }).catch((message) => {
+        document.querySelector("#hint").textContent = "Couldn't start the game: " + message;
+      });
+    };
+    document.body.appendChild(script);
+  </script>
+</body>
+</html>

@@ -1,0 +1,1146 @@
+/* =====================================================================
+   Monopoly HUD: bright, chunky, mobile-game style.
+   Note: USS has no sibling (+) selectors and no `gap`; spacing uses margins.
+   ===================================================================== */
+
+:root {
+    --navy: rgb(29, 42, 68);
+    --navy-soft: rgb(84, 98, 128);
+    --paper: rgb(255, 255, 255);
+    --paper-dim: rgb(238, 242, 248);
+    --line: rgb(220, 226, 236);
+    --green: rgb(61, 190, 91);
+    --green-dark: rgb(38, 140, 63);
+    --blue: rgb(59, 130, 246);
+    --blue-dark: rgb(37, 92, 196);
+    --red: rgb(239, 68, 68);
+    --red-dark: rgb(170, 34, 34);
+    --yellow: rgb(255, 201, 60);
+    --yellow-dark: rgb(206, 148, 14);
+    --gray: rgb(232, 236, 243);
+    --gray-dark: rgb(190, 198, 212);
+    --gold: rgb(255, 196, 46);
+}
+
+.root {
+    flex-grow: 1;
+    color: var(--navy);
+    font-size: 20px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelDemi.ttf");
+}
+
+.hidden {
+    display: none;
+}
+
+Label {
+    color: var(--navy);
+}
+
+/* ---------------------------------------------------------------- buttons */
+.unity-button.btn {
+    height: 56px;
+    margin: 5px;
+    padding: 0 22px;
+    border-width: 0;
+    border-bottom-width: 6px;
+    border-radius: 16px;
+    font-size: 22px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    color: rgb(255, 255, 255);
+    text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+    transition-property: translate, border-bottom-width, scale, background-color;
+    transition-duration: 0.08s, 0.08s, 0.15s, 0.15s;
+}
+
+.unity-button.btn:hover {
+    scale: 1.04 1.04;
+}
+
+.unity-button.btn:active {
+    translate: 0 4px;
+    border-bottom-width: 2px;
+}
+
+.unity-button.btn:disabled {
+    opacity: 0.45;
+}
+
+.unity-button.btn.green { background-color: var(--green); border-color: var(--green-dark); }
+.unity-button.btn.blue { background-color: var(--blue); border-color: var(--blue-dark); }
+.unity-button.btn.red { background-color: var(--red); border-color: var(--red-dark); }
+.unity-button.btn.yellow { background-color: var(--yellow); border-color: var(--yellow-dark); color: var(--navy); text-shadow: 0 0 0 rgba(0, 0, 0, 0); }
+.unity-button.btn.gray { background-color: var(--gray); border-color: var(--gray-dark); color: var(--navy); text-shadow: 0 0 0 rgba(0, 0, 0, 0); }
+.unity-button.btn.white { background-color: var(--paper); border-color: var(--gray-dark); color: var(--navy); text-shadow: 0 0 0 rgba(0, 0, 0, 0); }
+
+.unity-button.btn.big {
+    height: 78px;
+    font-size: 32px;
+    border-radius: 22px;
+    border-bottom-width: 8px;
+    padding: 0 40px;
+}
+
+.unity-button.btn.pill {
+    height: 48px;
+    font-size: 18px;
+    border-radius: 24px;
+    padding: 0 18px;
+}
+
+.unity-button.btn.small {
+    height: 40px;
+    font-size: 16px;
+    border-radius: 12px;
+    border-bottom-width: 4px;
+    padding: 0 12px;
+    margin: 2px 0 2px 6px;
+}
+
+.unity-button.btn.wide {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.unity-button.btn.selected {
+    background-color: var(--blue);
+    border-color: var(--blue-dark);
+    color: rgb(255, 255, 255);
+}
+
+.unity-button.arrow {
+    width: 36px;
+    height: 36px;
+    margin: 0 2px;
+    padding: 0;
+    border-width: 0;
+    border-radius: 18px;
+    background-color: var(--paper);
+    color: var(--navy);
+    font-size: 20px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+}
+
+.unity-button.arrow:hover {
+    background-color: var(--line);
+}
+
+/* ---------------------------------------------------------------- text fields */
+.root .unity-base-text-field__input {
+    background-color: var(--paper-dim);
+    border-width: 2px;
+    border-color: var(--line);
+    border-radius: 12px;
+    color: var(--navy);
+    font-size: 22px;
+    padding: 0 14px;
+}
+
+.root .unity-base-text-field__input > .unity-text-element {
+    color: var(--navy);
+}
+
+.unity-text-field.field {
+    height: 54px;
+    margin: 4px 0 14px 0;
+}
+
+/* ---------------------------------------------------------------- shared text */
+.panel-title {
+    font-size: 40px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    color: var(--navy);
+    margin-bottom: 12px;
+    white-space: normal;
+}
+
+.panel-title.small {
+    font-size: 24px;
+}
+
+.field-label {
+    font-size: 15px;
+    color: var(--navy-soft);
+    letter-spacing: 1px;
+    margin-top: 6px;
+}
+
+.hint {
+    font-size: 17px;
+    color: var(--navy-soft);
+    white-space: normal;
+    margin: 6px 0;
+}
+
+.centered {
+    -unity-text-align: middle-center;
+}
+
+.error {
+    font-size: 16px;
+    color: var(--red-dark);
+    white-space: normal;
+    background-color: rgb(254, 226, 226);
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin: 6px 0;
+}
+
+.row {
+    flex-direction: row;
+    margin: 4px -5px;
+}
+
+.row > .unity-button.btn {
+    flex-grow: 1;
+    flex-basis: 0;
+}
+
+/* ---------------------------------------------------------------- full-screen menus (3D world shows on the right) */
+.screen {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    justify-content: center;
+    padding-left: 48px;
+}
+
+.side-sheet {
+    width: 560px;
+    background-color: var(--paper);
+    border-radius: 32px;
+    border-bottom-width: 10px;
+    border-color: rgba(0, 0, 0, 0.18);
+    padding: 36px;
+}
+
+.side-sheet.wide {
+    width: 720px;
+    max-height: 94%;
+}
+
+.logo {
+    background-color: rgb(214, 38, 46);
+    border-radius: 18px;
+    border-width: 5px;
+    border-color: rgb(255, 255, 255);
+    border-bottom-width: 10px;
+    border-bottom-color: rgb(150, 22, 30);
+    padding: 10px 0 4px 0;
+    margin-bottom: 4px;
+    rotate: -3deg;
+}
+
+.logo__text {
+    font-size: 76px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-center;
+    letter-spacing: 3px;
+    text-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
+}
+
+.tagline {
+    -unity-text-align: middle-center;
+    font-size: 20px;
+    color: var(--navy-soft);
+    margin: 10px 0 18px 0;
+    letter-spacing: 4px;
+}
+
+.segmented {
+    flex-direction: row;
+    margin: 0 -5px 8px -5px;
+}
+
+.segmented > .unity-button.btn {
+    flex-grow: 1;
+    flex-basis: 0;
+    height: 48px;
+    font-size: 18px;
+}
+
+.code-box {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--navy);
+    border-radius: 18px;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+}
+
+.code-box .field-label {
+    color: rgb(170, 186, 214);
+}
+
+.code-value {
+    font-size: 40px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    color: var(--gold);
+    letter-spacing: 6px;
+}
+
+.seat-list {
+    flex-shrink: 1;
+    max-height: 520px;
+    margin: 6px 0 8px 0;
+}
+
+.seat {
+    flex-direction: row;
+    align-items: center;
+    height: 84px;
+    margin-bottom: 8px;
+    padding-right: 10px;
+    background-color: var(--paper-dim);
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+.seat__stripe {
+    width: 10px;
+    height: 100%;
+    margin-right: 8px;
+}
+
+.seat__portrait {
+    width: 72px;
+    height: 72px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.seat__picker {
+    flex-direction: row;
+    align-items: center;
+    width: 240px;
+}
+
+.seat__token-name {
+    width: 96px;
+    font-size: 15px;
+    color: var(--navy-soft);
+    white-space: normal;
+}
+
+.seat__name {
+    flex-grow: 1;
+    font-size: 22px;
+    margin: 0 8px;
+}
+
+.seat__name.unity-text-field {
+    height: 46px;
+}
+
+.seat__badge {
+    font-size: 13px;
+    color: var(--navy-soft);
+    background-color: var(--paper);
+    border-radius: 10px;
+    padding: 4px 10px;
+    margin-right: 4px;
+    letter-spacing: 1px;
+}
+
+/* ---------------------------------------------------------------- in-game HUD */
+.hud {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.player-bar {
+    position: absolute;
+    top: 14px;
+    left: 0;
+    right: 0;
+    flex-direction: row;
+    justify-content: center;
+}
+
+.chip {
+    flex-direction: row;
+    align-items: center;
+    width: 250px;
+    height: 92px;
+    margin: 0 7px;
+    padding: 0 20px 0 6px;
+    background-color: rgba(255, 255, 255, 0.92);
+    border-radius: 46px;
+    border-width: 0;
+    border-bottom-width: 5px;
+    border-color: rgba(0, 0, 0, 0.12);
+    transition-property: scale, translate;
+    transition-duration: 0.3s;
+    transition-timing-function: ease-out-back;
+}
+
+.chip:hover {
+    scale: 1.03 1.03;
+}
+
+.chip.active {
+    scale: 1.08 1.08;
+    translate: 0 6px;
+    border-width: 4px;
+    border-bottom-width: 7px;
+    border-color: var(--gold);
+}
+
+.chip.bankrupt {
+    opacity: 0.35;
+}
+
+.chip__avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 40px;
+    border-width: 5px;
+    background-color: var(--paper-dim);
+    -unity-background-scale-mode: scale-to-fit;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.chip__info {
+    flex-grow: 1;
+    flex-shrink: 1;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.chip__info > Label {
+    margin: 0;
+    padding: 0;
+}
+
+.chip__name {
+    font-size: 18px;
+    color: var(--navy);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chip__money {
+    font-size: 30px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    color: var(--green-dark);
+    margin-top: -2px;
+}
+
+.chip__status {
+    font-size: 13px;
+    color: var(--navy-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.money-float {
+    position: absolute;
+    font-size: 34px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    -unity-text-outline-width: 3px;
+    -unity-text-outline-color: rgb(255, 255, 255);
+    transition-property: translate, opacity;
+    transition-duration: 1.2s, 1.2s;
+    transition-timing-function: ease-out;
+}
+
+.money-float.up {
+    color: var(--green-dark);
+}
+
+.money-float.down {
+    color: var(--red);
+}
+
+.toast {
+    position: absolute;
+    top: 140px;
+    left: 30%;
+    right: 30%;
+    -unity-text-align: middle-center;
+    white-space: normal;
+    font-size: 19px;
+    color: rgb(255, 255, 255);
+    background-color: rgba(29, 42, 68, 0.82);
+    border-radius: 22px;
+    padding: 10px 20px;
+    opacity: 0;
+    translate: 0 -10px;
+    transition-property: opacity, translate;
+    transition-duration: 0.25s;
+}
+
+.toast.visible {
+    opacity: 1;
+    translate: 0 0;
+}
+
+.announce {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 30%;
+    align-items: center;
+    opacity: 0;
+    scale: 0.4 0.4;
+    transition-property: opacity, scale;
+    transition-duration: 0.35s, 0.45s;
+    transition-timing-function: ease-out, ease-out-back;
+}
+
+.announce.show {
+    opacity: 1;
+    scale: 1 1;
+}
+
+.announce__title {
+    font-size: 120px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    color: rgb(255, 255, 255);
+    -unity-text-outline-width: 6px;
+    -unity-text-outline-color: var(--navy);
+    text-shadow: 0 8px 0 rgba(0, 0, 0, 0.35);
+    -unity-text-align: middle-center;
+}
+
+.announce__sub {
+    font-size: 48px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    color: var(--gold);
+    -unity-text-outline-width: 4px;
+    -unity-text-outline-color: var(--navy);
+    -unity-text-align: middle-center;
+}
+
+.bottom {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 22px;
+    align-items: center;
+}
+
+.status-pill {
+    font-size: 22px;
+    color: rgb(255, 255, 255);
+    background-color: rgba(29, 42, 68, 0.85);
+    border-radius: 24px;
+    padding: 8px 22px;
+    margin-bottom: 10px;
+    -unity-text-align: middle-center;
+    max-width: 900px;
+    white-space: normal;
+}
+
+.secondary-actions {
+    flex-direction: row;
+    justify-content: center;
+    margin-bottom: 4px;
+}
+
+.primary-row {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+.unity-button.roll-btn {
+    width: 176px;
+    height: 176px;
+    border-radius: 88px;
+    border-width: 8px;
+    border-color: rgb(255, 255, 255);
+    border-bottom-width: 16px;
+    border-bottom-color: var(--green-dark);
+    background-color: var(--green);
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+    transition-property: scale, translate, border-bottom-width;
+    transition-duration: 0.1s;
+}
+
+.unity-button.roll-btn.pulse {
+    scale: 1.07 1.07;
+    transition-duration: 0.6s;
+    transition-timing-function: ease-in-out;
+}
+
+.unity-button.roll-btn:active {
+    translate: 0 8px;
+    border-bottom-width: 8px;
+}
+
+.unity-button.roll-btn:disabled {
+    opacity: 0.45;
+}
+
+.roll-btn__label {
+    font-size: 48px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    color: rgb(255, 255, 255);
+    text-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
+}
+
+.corner-left {
+    position: absolute;
+    left: 20px;
+    bottom: 24px;
+}
+
+.corner-right {
+    position: absolute;
+    right: 20px;
+    bottom: 24px;
+    align-items: flex-end;
+}
+
+.log-drawer {
+    position: absolute;
+    top: 140px;
+    bottom: 120px;
+    right: 18px;
+    width: 420px;
+    background-color: rgba(255, 255, 255, 0.92);
+    border-radius: 28px;
+    padding: 18px;
+    opacity: 0;
+    translate: 60px 0;
+    transition-property: translate, opacity;
+    transition-duration: 0.25s;
+    transition-timing-function: ease-out;
+}
+
+.log-drawer.open {
+    opacity: 1;
+    translate: 0 0;
+}
+
+.log {
+    flex-grow: 1;
+}
+
+.log-line {
+    font-size: 15px;
+    color: var(--navy-soft);
+    white-space: normal;
+    margin-bottom: 5px;
+}
+
+.log-line.highlight {
+    color: var(--navy);
+}
+
+/* ---------------------------------------------------------------- dialogs */
+.modal-backdrop {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(10, 20, 40, 0.45);
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: 0.25s;
+}
+
+.modal-backdrop.open {
+    opacity: 1;
+}
+
+.modal {
+    background-color: var(--paper);
+    border-radius: 30px;
+    border-bottom-width: 10px;
+    border-color: rgba(0, 0, 0, 0.18);
+    padding: 30px;
+    scale: 0.7 0.7;
+    opacity: 0;
+    transition-property: scale, opacity;
+    transition-duration: 0.35s, 0.2s;
+    transition-timing-function: ease-out-back, ease-out;
+}
+
+.modal-backdrop.open > .modal {
+    scale: 1 1;
+    opacity: 1;
+}
+
+.deed {
+    flex-direction: row;
+    width: 820px;
+}
+
+.deed-image {
+    width: 270px;
+    height: 405px;
+    border-radius: 12px;
+    -unity-background-scale-mode: scale-to-fit;
+    margin-right: 26px;
+    rotate: -3deg;
+}
+
+.deed-info {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.deed-title {
+    font-size: 36px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    white-space: normal;
+}
+
+.deed-group {
+    height: 10px;
+    border-radius: 5px;
+    margin: 8px 0 10px 0;
+}
+
+.deed-row {
+    flex-direction: row;
+    justify-content: space-between;
+    border-bottom-width: 2px;
+    border-color: var(--paper-dim);
+    padding: 5px 0;
+}
+
+.deed-row > Label {
+    font-size: 18px;
+}
+
+.game-card {
+    width: 500px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.game-card__header {
+    padding: 22px;
+    font-size: 38px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    -unity-text-align: middle-center;
+    color: rgb(255, 255, 255);
+    text-shadow: 0 3px 0 rgba(0, 0, 0, 0.25);
+}
+
+.game-card__header.chance {
+    background-color: rgb(247, 148, 29);
+}
+
+.game-card__header.chest {
+    background-color: rgb(52, 120, 220);
+}
+
+.game-card__body {
+    padding: 26px;
+}
+
+.game-card__text {
+    font-size: 27px;
+    white-space: normal;
+    -unity-text-align: middle-center;
+    margin: 8px 0 18px 0;
+}
+
+.manage {
+    width: 880px;
+    height: 82%;
+}
+
+.manage-list {
+    flex-grow: 1;
+    margin: 8px 0 12px 0;
+}
+
+.manage-row {
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom-width: 2px;
+    border-color: var(--paper-dim);
+}
+
+.manage-row__chip {
+    width: 16px;
+    height: 34px;
+    border-radius: 4px;
+    margin-right: 12px;
+}
+
+.manage-row__name {
+    flex-grow: 1;
+    font-size: 19px;
+}
+
+.manage-row__state {
+    width: 110px;
+    font-size: 15px;
+    color: var(--navy-soft);
+}
+
+.manage-empty {
+    color: var(--navy-soft);
+    margin-top: 30px;
+    -unity-text-align: middle-center;
+}
+
+.message {
+    width: 560px;
+}
+
+/* ---------------------------------------------------------------- frosted glass
+   HudController paints the blurred 3D scene (BlurCapture) into every .glass element's background, aligned
+   with the screen; the tint below decides how light or dark the glass is. Without the blur texture the
+   background colours act as a fallback. */
+.glass {
+    -unity-background-image-tint-color: rgb(255, 255, 255);
+}
+
+.glass.dark {
+    -unity-background-image-tint-color: rgb(58, 70, 98);
+}
+
+.glass.backdrop {
+    -unity-background-image-tint-color: rgb(120, 132, 158);
+}
+
+.status-pill.glass,
+.toast.glass {
+    color: rgb(255, 255, 255);
+}
+
+/* ---------------------------------------------------------------- player sheet */
+.sheet {
+    width: 760px;
+    max-height: 88%;
+}
+
+.sheet-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.sheet-avatar {
+    width: 110px;
+    height: 110px;
+    border-radius: 55px;
+    border-width: 6px;
+    background-color: var(--paper-dim);
+    -unity-background-scale-mode: scale-to-fit;
+    margin-right: 18px;
+}
+
+.sheet-header__text > .panel-title {
+    margin-bottom: 0;
+}
+
+.sheet-cash {
+    font-size: 30px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    color: var(--green-dark);
+}
+
+.sheet-list {
+    flex-shrink: 1;
+    max-height: 420px;
+    margin: 6px 0 12px 0;
+}
+
+.prop-row {
+    flex-direction: row;
+    align-items: center;
+    min-height: 52px;
+    padding: 4px 10px;
+    margin-bottom: 6px;
+    border-radius: 14px;
+    background-color: rgba(255, 255, 255, 0.6);
+}
+
+.prop-row__chip {
+    width: 14px;
+    height: 34px;
+    border-radius: 4px;
+    margin-right: 12px;
+}
+
+.prop-row__name {
+    flex-grow: 1;
+    font-size: 19px;
+}
+
+.prop-row__state {
+    font-size: 15px;
+    color: var(--navy-soft);
+}
+
+.prop-row.selectable:hover {
+    background-color: rgba(255, 255, 255, 0.85);
+}
+
+.prop-row.selected {
+    background-color: rgb(212, 240, 220);
+    border-width: 3px;
+    border-color: var(--green);
+}
+
+.prop-row.locked {
+    opacity: 0.4;
+}
+
+/* ---------------------------------------------------------------- trade */
+.trade {
+    width: 1040px;
+    max-height: 92%;
+}
+
+.trade-columns {
+    flex-direction: row;
+    flex-shrink: 1;
+    margin: 0 -8px;
+}
+
+.trade-col {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin: 0 8px;
+    padding: 12px;
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.45);
+}
+
+.trade-col__title {
+    font-size: 22px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    margin-bottom: 8px;
+}
+
+.trade-list {
+    flex-shrink: 1;
+    max-height: 330px;
+    min-height: 120px;
+}
+
+.stepper {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin-top: 8px;
+}
+
+.unity-button.btn.step {
+    width: 64px;
+    height: 56px;
+    padding: 0;
+    font-size: 30px;
+}
+
+.stepper__value {
+    min-width: 150px;
+    font-size: 32px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    color: var(--green-dark);
+    -unity-text-align: middle-center;
+}
+
+/* ---------------------------------------------------------------- phones: bigger touch targets */
+.mobile .unity-button.btn {
+    height: 64px;
+    font-size: 24px;
+}
+
+.mobile .unity-button.btn.big {
+    height: 82px;
+}
+
+.mobile .unity-button.btn.small {
+    height: 54px;
+    font-size: 19px;
+    padding: 0 14px;
+}
+
+.mobile .unity-button.btn.pill {
+    height: 62px;
+    font-size: 21px;
+    border-radius: 31px;
+    padding: 0 24px;
+}
+
+.mobile .unity-button.btn.step {
+    width: 76px;
+    height: 66px;
+}
+
+.mobile .unity-button.btn:hover,
+.mobile .chip:hover {
+    scale: 1 1;
+}
+
+.mobile .unity-button.arrow {
+    width: 58px;
+    height: 58px;
+    border-radius: 29px;
+    font-size: 28px;
+}
+
+.mobile .seat {
+    height: 98px;
+}
+
+.mobile .unity-text-field.field {
+    height: 66px;
+}
+
+.mobile .unity-base-text-field__input {
+    font-size: 26px;
+}
+
+.mobile .prop-row {
+    min-height: 64px;
+}
+
+.mobile .log-line {
+    font-size: 18px;
+}
+
+.mobile .corner-left,
+.mobile .corner-right {
+    bottom: 18px;
+}
+
+/* ---------------------------------------------------------------- auction */
+.auction {
+    width: 900px;
+}
+
+.auction__title {
+    font-size: 54px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    color: rgb(214, 38, 46);
+    -unity-text-align: middle-center;
+    letter-spacing: 6px;
+    margin-bottom: 8px;
+}
+
+.auction__body {
+    flex-direction: row;
+    margin-bottom: 12px;
+}
+
+.auction__image {
+    width: 200px;
+    height: 300px;
+    -unity-background-scale-mode: scale-to-fit;
+    margin-right: 24px;
+    rotate: -3deg;
+}
+
+.auction__info {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.auction__high {
+    font-size: 64px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    color: var(--green-dark);
+}
+
+.auction__bidders {
+    flex-direction: row;
+    margin: 8px 0;
+}
+
+.auction__bidder {
+    width: 58px;
+    height: 58px;
+    border-radius: 29px;
+    border-width: 4px;
+    margin-right: 8px;
+    background-color: var(--paper-dim);
+    -unity-background-scale-mode: scale-to-fit;
+    opacity: 0.55;
+}
+
+.auction__bidder.current {
+    opacity: 1;
+    scale: 1.15 1.15;
+}
+
+.auction__bidder.out {
+    opacity: 0.15;
+}
+
+.auction__turn {
+    font-size: 22px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    color: var(--navy);
+    white-space: normal;
+}
+
+/* ---------------------------------------------------------------- settings */
+.settings {
+    width: 860px;
+    max-height: 92%;
+}
+
+.settings-list {
+    flex-shrink: 1;
+    margin-bottom: 12px;
+}
+
+.settings-section {
+    font-size: 15px;
+    color: var(--navy-soft);
+    letter-spacing: 2px;
+    margin: 14px 0 6px 0;
+}
+
+.settings-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    margin-bottom: 6px;
+    border-radius: 16px;
+    background-color: rgba(255, 255, 255, 0.55);
+}
+
+.settings-row__label {
+    font-size: 20px;
+    flex-shrink: 1;
+    white-space: normal;
+    margin-right: 12px;
+}
+
+.settings-row .segmented {
+    margin: 0;
+}
+
+.settings-row .segmented > .unity-button.btn {
+    flex-grow: 0;
+    flex-basis: auto;
+    min-width: 96px;
+    height: 46px;
+    font-size: 17px;
+    margin: 3px;
+}
+
+.mobile .settings-row .segmented > .unity-button.btn {
+    height: 56px;
+    min-width: 110px;
+    font-size: 19px;
+}
