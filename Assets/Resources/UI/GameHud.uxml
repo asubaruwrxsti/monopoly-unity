@@ -33,8 +33,10 @@
             <ui:VisualElement class="corner-left" picking-mode="Ignore">
                 <ui:Button name="manage-btn" text="Properties" class="btn white pill" />
                 <ui:Button name="log-btn" text="Log" class="btn white pill" />
+                <ui:Button name="settings-btn" text="Settings" class="btn white pill" />
             </ui:VisualElement>
             <ui:VisualElement class="corner-right" picking-mode="Ignore">
+                <ui:Button name="focus-btn" text="Focus" class="btn blue pill hidden" />
                 <ui:Button name="speed-btn" text="1x" class="btn white pill" />
                 <ui:Button name="leave-btn" text="Leave" class="btn white pill" />
             </ui:VisualElement>
@@ -57,6 +59,7 @@
                 <ui:Button name="menu-local-btn" text="Play" class="btn green big wide" />
                 <ui:Button name="menu-host-btn" text="Host online game" class="btn blue wide" />
                 <ui:Button name="menu-join-btn" text="Join online game" class="btn blue wide" />
+                <ui:Button name="menu-settings-btn" text="Settings" class="btn gray wide" />
                 <ui:Button name="menu-quit-btn" text="Quit" class="btn gray wide" />
             </ui:VisualElement>
         </ui:VisualElement>
@@ -204,6 +207,38 @@
                     <ui:Button name="trade-reject-btn" text="Decline" class="btn red" />
                     <ui:Button name="trade-accept-btn" text="Accept" class="btn green" />
                 </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="auction-modal" class="modal-backdrop glass backdrop hidden">
+            <ui:VisualElement class="modal auction glass">
+                <ui:Label text="AUCTION" class="auction__title" />
+                <ui:VisualElement class="auction__body">
+                    <ui:VisualElement name="auction-image" class="auction__image" />
+                    <ui:VisualElement class="auction__info">
+                        <ui:Label name="auction-property" class="panel-title" />
+                        <ui:Label name="auction-price" class="hint" />
+                        <ui:Label text="Highest bid" class="field-label" />
+                        <ui:Label name="auction-high" class="auction__high" />
+                        <ui:Label name="auction-leader" class="hint" />
+                        <ui:VisualElement name="auction-bidders" class="auction__bidders" />
+                        <ui:Label name="auction-turn" class="auction__turn" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="auction-actions" class="row">
+                    <ui:Button name="auction-pass-btn" text="Pass" class="btn gray" />
+                    <ui:Button name="auction-bid1-btn" class="btn green" />
+                    <ui:Button name="auction-bid2-btn" class="btn green" />
+                    <ui:Button name="auction-bid3-btn" class="btn green" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <ui:VisualElement name="settings-modal" class="modal-backdrop glass backdrop hidden">
+            <ui:VisualElement class="modal settings glass">
+                <ui:Label text="Settings" class="panel-title" />
+                <ui:ScrollView name="settings-list" class="settings-list" />
+                <ui:Button name="settings-done-btn" text="Done" class="btn green wide" />
             </ui:VisualElement>
         </ui:VisualElement>
 

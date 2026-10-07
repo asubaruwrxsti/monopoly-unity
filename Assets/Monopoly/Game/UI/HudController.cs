@@ -66,6 +66,15 @@ namespace Monopoly.Game
         private int tradeGiveAmount, tradeGetAmount;
         private TradeOffer answeredOffer;
 
+        // settings, auction, camera focus
+        private VisualElement settingsModal, auctionModal, auctionImage, auctionBidders, auctionActions;
+        private ScrollView settingsList;
+        private Label auctionProperty, auctionPrice, auctionHigh, auctionLeader, auctionTurn;
+        private Button auctionPassBtn, focusBtn;
+        private readonly Button[] auctionBidBtns = new Button[3];
+        private readonly int[] auctionBidAmounts = new int[3];
+        private BoardCamera boardCamera;
+
         /// <summary>Phone layout: bigger touch targets, no scrollbars. Forced on desktop with -mobileUI.</summary>
         public static bool IsMobileLayout { get; private set; }
 
@@ -300,6 +309,36 @@ namespace Monopoly.Game
             });
             Btn("trade-accept-btn", () => { CloseModal(tradeModal); Send(CommandType.AcceptTrade); });
             Btn("trade-reject-btn", () => { CloseModal(tradeModal); Send(CommandType.RejectTrade); });
+
+            // settings
+            settingsModal = Q<VisualElement>("settings-modal");
+            settingsList = Q<ScrollView>("settings-list");
+            Btn("menu-settings-btn", ShowSettings);
+            Btn("settings-btn", ShowSettings);
+            Btn("settings-done-btn", () => CloseModal(settingsModal));
+
+            // auction
+            auctionModal = Q<VisualElement>("auction-modal");
+            auctionImage = Q<VisualElement>("auction-image");
+            auctionBidders = Q<VisualElement>("auction-bidders");
+            auctionActions = Q<VisualElement>("auction-actions");
+            auctionProperty = Q<Label>("auction-property");
+            auctionPrice = Q<Label>("auction-price");
+            auctionHigh = Q<Label>("auction-high");
+            auctionLeader = Q<Label>("auction-leader");
+            auctionTurn = Q<Label>("auction-turn");
+            auctionPassBtn = Btn("auction-pass-btn", () => Send(CommandType.AuctionPass));
+            for (int i = 0; i < 3; i++)
+            {
+                int slot = i;
+                auctionBidBtns[i] = Btn($"auction-bid{i + 1}-btn", () => flow?.Request(GameCommand.Bid(auctionBidAmounts[slot])));
+            }
+
+            // camera
+            boardCamera = FindFirstObjectByType<BoardCamera>();
+            focusBtn = Btn("focus-btn", () => boardCamera?.ReturnToDirector());
+            GameSettings.Changed += UpdateSpeedLabel;
+            UpdateSpeedLabel();
 
             // Phones scroll by dragging; scrollbars only get in the way.
             if (IsMobileLayout)
@@ -570,7 +609,10 @@ namespace Monopoly.Game
 
         private Rect appliedSafeArea;
 
-        /// <summary>Keeps the UI clear of the notch / Dynamic Island and the home indicator.</summary>
+        /// <summary>
+        /// Keeps the HUD and menus clear of the notch / Dynamic Island and the home indicator. Dialog backdrops are
+        /// not inset, so their blur still covers the whole screen.
+        /// </summary>
         private void ApplySafeArea()
         {
             Rect safe = Screen.safeArea;
@@ -578,17 +620,22 @@ namespace Monopoly.Game
             if (safe == appliedSafeArea || panel == null || float.IsNaN(panel.visualTree.layout.width) || panel.visualTree.layout.width <= 0) return;
             appliedSafeArea = safe;
             float scale = Screen.width / panel.visualTree.layout.width;
-            root.style.position = Position.Absolute;
-            root.style.left = safe.xMin / scale;
-            root.style.right = (Screen.width - safe.xMax) / scale;
-            root.style.top = (Screen.height - safe.yMax) / scale;
-            root.style.bottom = safe.yMin / scale;
+            float left = safe.xMin / scale, right = (Screen.width - safe.xMax) / scale;
+            float top = (Screen.height - safe.yMax) / scale, bottom = safe.yMin / scale;
+            foreach (var e in new[] { hud, menuScreen, connectScreen, lobbyScreen })
+            {
+                e.style.left = left;
+                e.style.right = right;
+                e.style.top = top;
+                e.style.bottom = bottom;
+            }
         }
 
         private void Update()
         {
             ApplySafeArea();
             ApplyGlass();
+            SetVisible(focusBtn, BoardCamera.IsManual && IsVisible(hud));
             if (flow == null || flow.Game == null) return;
             // Money counters roll toward the amounts the animation has reached (not the engine's final state).
             for (int i = 0; i < chips.Count && i < shownMoney.Length; i++)
@@ -621,7 +668,15 @@ namespace Monopoly.Game
                 CloseModal(tradeModal);
             if (IsVisible(playerModal) && sheetPlayer >= 0) FillPlayerSheet(sheetPlayer);
 
-            bool mine = flow.LocalControlsSeat(game.CurrentPlayerIndex) && !game.IsOver && game.Phase != TurnPhase.AwaitingTradeResponse;
+            if (game.Phase == TurnPhase.AwaitingAuctionBid)
+            {
+                FillAuction();
+                OpenModal(auctionModal);
+            }
+            else if (IsVisible(auctionModal)) CloseModal(auctionModal);
+
+            bool mine = flow.LocalControlsSeat(game.CurrentPlayerIndex) && !game.IsOver
+                        && game.Phase != TurnPhase.AwaitingTradeResponse && game.Phase != TurnPhase.AwaitingAuctionBid;
             bool canAct = flow.CanLocalAct;
             statusLabel.text = StatusText(game, mine);
 
@@ -679,6 +734,7 @@ namespace Monopoly.Game
             var p = game.CurrentPlayer;
             if (game.IsOver) return $"{game.Winner.Name} wins!";
             if (flow.IsWaitingForHost) return "Sending to host...";
+            if (game.Phase == TurnPhase.AwaitingAuctionBid) return $"Auction: {BoardLayout.Spaces[game.Auction.Space].Name}";
             if (game.Phase == TurnPhase.AwaitingTradeResponse)
             {
                 var partner = game.Players[game.PendingTrade.To];
@@ -785,10 +841,16 @@ namespace Monopoly.Game
             toastHide = toast.schedule.Execute(() => toast.RemoveFromClassList("visible")).StartingIn(2400);
         }
 
+        private void UpdateSpeedLabel() => speedBtn.text = $"{GameSettings.GameSpeed}x";
+
+        private void OnDestroy() => GameSettings.Changed -= UpdateSpeedLabel;
+
+        public bool IsAuctionVisible => IsVisible(auctionModal);
+
         private void CycleSpeed()
         {
-            Time.timeScale = Time.timeScale >= 4f ? 1f : Time.timeScale * 2f;
-            speedBtn.text = $"{Time.timeScale:0}x";
+            GameSettings.GameSpeed = GameSettings.GameSpeed >= 4 ? 1 : GameSettings.GameSpeed * 2;
+            GameSettings.Save();
         }
 
         // ---------------------------------------------------------------- cards
@@ -977,7 +1039,8 @@ namespace Monopoly.Game
 
         public bool IsBlockingBoardClicks =>
             IsVisible(deedModal) || IsVisible(cardModal) || IsVisible(manageModal) || IsVisible(messageModal) ||
-            IsVisible(busyModal) || IsVisible(playerModal) || IsVisible(tradeModal) || !IsVisible(hud);
+            IsVisible(busyModal) || IsVisible(playerModal) || IsVisible(tradeModal) || IsVisible(auctionModal) ||
+            IsVisible(settingsModal) || !IsVisible(hud);
 
         // ---------------------------------------------------------------- log, glass
 
@@ -1006,19 +1069,147 @@ namespace Monopoly.Game
         {
             var rt = BlurCapture.Texture;
             var panel = document.rootVisualElement.panel;
-            if (rt == null || panel == null) return;
+            if (!GameSettings.Blur && glassPlacement.Count > 0)
+            {
+                // Blur switched off: fall back to the plain panel colours.
+                foreach (var e in glassPlacement.Keys) e.style.backgroundImage = StyleKeyword.Null;
+                glassPlacement.Clear();
+            }
+            if (rt == null || panel == null || !GameSettings.Blur) return;
             Rect screen = panel.visualTree.layout;
             if (float.IsNaN(screen.width) || screen.width <= 0) return;
-            var size = new BackgroundSize(new Length(screen.width), new Length(screen.height));
-            root.Query(className: "glass").ForEach(e =>
+            glassElements.Clear();
+            root.Query(className: "glass").ToList(glassElements);
+            foreach (var e in glassElements)
             {
-                if (e.resolvedStyle.display == DisplayStyle.None) return;
-                if (e.style.backgroundImage.value.renderTexture != rt) e.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(rt));
+                if (e.resolvedStyle.display == DisplayStyle.None) continue;
                 Rect wb = e.worldBound;
-                e.style.backgroundSize = size;
+                var key = new Rect(wb.x, wb.y, screen.width, screen.height);
+                // Only touch styles when something moved: restyling every element every frame is wasted work.
+                if (e.style.backgroundImage.value.renderTexture == rt && glassPlacement.TryGetValue(e, out var last) && last == key) continue;
+                glassPlacement[e] = key;
+                e.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(rt));
+                e.style.backgroundSize = new BackgroundSize(new Length(screen.width), new Length(screen.height));
                 e.style.backgroundPositionX = new BackgroundPosition(BackgroundPositionKeyword.Left, new Length(-wb.x));
                 e.style.backgroundPositionY = new BackgroundPosition(BackgroundPositionKeyword.Top, new Length(-wb.y));
+            }
+        }
+
+        private readonly List<VisualElement> glassElements = new List<VisualElement>();
+        private readonly Dictionary<VisualElement, Rect> glassPlacement = new Dictionary<VisualElement, Rect>();
+
+        // ---------------------------------------------------------------- auction
+
+        private void FillAuction()
+        {
+            var game = flow.Game;
+            var a = game.Auction;
+            var def = BoardLayout.Spaces[a.Space];
+            auctionImage.style.backgroundImage = new StyleBackground(Resources.Load<Texture2D>("Tiles/" + def.Texture));
+            auctionProperty.text = def.Name;
+            auctionPrice.text = $"List price ${def.Price}";
+            auctionHigh.text = a.HighBidder >= 0 ? $"${a.HighBid}" : "No bids yet";
+            auctionLeader.text = a.HighBidder >= 0 ? $"{game.Players[a.HighBidder].Name} is winning" : "Bidding starts at $10";
+
+            auctionBidders.Clear();
+            foreach (int id in a.Bidders)
+            {
+                var avatar = new VisualElement();
+                avatar.AddToClassList("auction__bidder");
+                avatar.EnableInClassList("current", id == a.CurrentBidder);
+                avatar.style.backgroundImage = new StyleBackground(TokenPortraits.Get(flow.SeatList[id].Token));
+                var c = SeatRules.PlayerColors[id % SeatRules.PlayerColors.Length];
+                avatar.style.borderTopColor = avatar.style.borderBottomColor = avatar.style.borderLeftColor = avatar.style.borderRightColor = c;
+                auctionBidders.Add(avatar);
+            }
+
+            var bidder = game.Players[a.CurrentBidder];
+            bool mine = flow.CanLocalAct;
+            auctionTurn.text = mine ? (flow.HasSeveralLocalHumans ? $"{bidder.Name}, your bid (${bidder.Money} cash)" : $"Your bid (${bidder.Money} cash)")
+                                    : $"{bidder.Name} is bidding...";
+            SetVisible(auctionActions, mine);
+
+            // Quick bids: small, medium and big raises (or opening offers when nobody has bid yet).
+            int[] raises = a.HighBidder < 0
+                ? new[] { AuctionState.MinimumBid, Mathf.Max(AuctionState.MinimumBid, def.Price / 2 / 10 * 10), def.Price }
+                : new[] { a.HighBid + 10, a.HighBid + 50, a.HighBid + 100 };
+            for (int i = 0; i < 3; i++)
+            {
+                auctionBidAmounts[i] = raises[i];
+                auctionBidBtns[i].text = $"${raises[i]}";
+                auctionBidBtns[i].SetEnabled(mine && game.CanBid(raises[i]));
+            }
+            auctionPassBtn.SetEnabled(mine);
+        }
+
+        // ---------------------------------------------------------------- settings
+
+        internal void ShowSettings()
+        {
+            FillSettings();
+            OpenModal(settingsModal);
+        }
+
+        private void FillSettings()
+        {
+            settingsList.Clear();
+            Section("GRAPHICS");
+            Choice("Quality", new[] { "Low", "Medium", "High" }, (int)GameSettings.Quality, i => GameSettings.Quality = (GraphicsQuality)i);
+            Choice("Frosted glass blur", new[] { "Off", "On" }, GameSettings.Blur ? 1 : 0, i => GameSettings.Blur = i == 1);
+            int[] rates = { 30, 60, 120 };
+            Choice("Frame rate", new[] { "30", "60", "120" }, System.Array.IndexOf(rates, GameSettings.FrameRate), i => GameSettings.FrameRate = rates[i]);
+
+            Section("AUDIO");
+            Choice("Sound effects", new[] { "Off", "Low", "Medium", "High" }, GameSettings.Volume, i =>
+            {
+                GameSettings.Volume = i;
+                Sfx.Volume = GameSettings.VolumeLevel;
             });
+
+            Section("CAMERA");
+            Choice("After you move the camera", new[] { "Stay until Focus", "Reset each turn" }, GameSettings.CameraAutoReturn ? 1 : 0,
+                   i => GameSettings.CameraAutoReturn = i == 1);
+            Choice("Camera shake", new[] { "Off", "On" }, GameSettings.CameraShake ? 1 : 0, i => GameSettings.CameraShake = i == 1);
+
+            Section("GAMEPLAY");
+            int[] speeds = { 1, 2, 4 };
+            Choice("Animation speed", new[] { "1x", "2x", "4x" }, System.Array.IndexOf(speeds, GameSettings.GameSpeed), i => GameSettings.GameSpeed = speeds[i]);
+            Choice("Computer players", new[] { "Relaxed", "Normal", "Fast" }, GameSettings.CpuSpeed, i => GameSettings.CpuSpeed = i);
+        }
+
+        private void Section(string title)
+        {
+            var label = new Label(title);
+            label.AddToClassList("settings-section");
+            settingsList.Add(label);
+        }
+
+        private void Choice(string label, string[] options, int selected, Action<int> pick)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("settings-row");
+            var text = new Label(label);
+            text.AddToClassList("settings-row__label");
+            row.Add(text);
+            var group = new VisualElement();
+            group.AddToClassList("segmented");
+            for (int i = 0; i < options.Length; i++)
+            {
+                int index = i;
+                var b = new Button(() =>
+                {
+                    Sfx.Play(SfxKind.Click);
+                    pick(index);
+                    GameSettings.Save();
+                    FillSettings();
+                }) { text = options[i] };
+                b.AddToClassList("btn");
+                b.AddToClassList("gray");
+                b.EnableInClassList("selected", i == selected);
+                group.Add(b);
+            }
+            row.Add(group);
+            settingsList.Add(row);
         }
 
         // ---------------------------------------------------------------- player sheet & trading
@@ -1134,7 +1325,7 @@ namespace Monopoly.Game
 
         internal void CloseDialogs()
         {
-            foreach (var m in new[] { playerModal, tradeModal, manageModal, deedModal }) CloseModal(m);
+            foreach (var m in new[] { playerModal, tradeModal, manageModal, deedModal, settingsModal }) CloseModal(m);
             if (logDrawer.ClassListContains("open")) ToggleLog();
         }
 

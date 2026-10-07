@@ -17,6 +17,8 @@ namespace Monopoly.Core
         ProposeTrade,
         AcceptTrade,
         RejectTrade,
+        AuctionBid,
+        AuctionPass,
     }
 
     /// <summary>
@@ -30,13 +32,18 @@ namespace Monopoly.Core
         public int Space { get; }
         /// <summary>The offer for <see cref="CommandType.ProposeTrade"/>, otherwise null.</summary>
         public TradeOffer Offer { get; }
+        /// <summary>The bid for <see cref="CommandType.AuctionBid"/>.</summary>
+        public int Amount { get; }
 
-        public GameCommand(CommandType type, int space = -1, TradeOffer offer = null)
+        public GameCommand(CommandType type, int space = -1, TradeOffer offer = null, int amount = 0)
         {
             Type = type;
             Space = space;
             Offer = offer;
+            Amount = amount;
         }
+
+        public static GameCommand Bid(int amount) => new GameCommand(CommandType.AuctionBid, -1, null, amount);
 
         public static GameCommand Trade(TradeOffer offer) => new GameCommand(CommandType.ProposeTrade, -1, offer);
 
@@ -48,7 +55,7 @@ namespace Monopoly.Core
         public static bool IsLegal(this MonopolyGame game, GameCommand cmd)
         {
             bool validSpace = cmd.Space >= 0 && cmd.Space < BoardLayout.SpaceCount && game.GetProperty(cmd.Space) != null
-                              && game.Phase != TurnPhase.AwaitingTradeResponse;
+                              && game.Phase != TurnPhase.AwaitingTradeResponse && game.Phase != TurnPhase.AwaitingAuctionBid;
             switch (cmd.Type)
             {
                 case CommandType.Roll: return game.CanRoll;
@@ -66,6 +73,8 @@ namespace Monopoly.Core
                 case CommandType.ProposeTrade: return game.CanProposeTrade(cmd.Offer);
                 case CommandType.AcceptTrade:
                 case CommandType.RejectTrade: return game.Phase == TurnPhase.AwaitingTradeResponse;
+                case CommandType.AuctionBid: return game.CanBid(cmd.Amount);
+                case CommandType.AuctionPass: return game.Phase == TurnPhase.AwaitingAuctionBid;
                 default: return false;
             }
         }
@@ -89,6 +98,8 @@ namespace Monopoly.Core
                 case CommandType.ProposeTrade: game.ProposeTrade(cmd.Offer); break;
                 case CommandType.AcceptTrade: game.RespondToTrade(true); break;
                 case CommandType.RejectTrade: game.RespondToTrade(false); break;
+                case CommandType.AuctionBid: game.Bid(cmd.Amount); break;
+                case CommandType.AuctionPass: game.PassAuction(); break;
             }
         }
     }

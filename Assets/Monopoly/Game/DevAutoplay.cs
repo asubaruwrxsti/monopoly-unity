@@ -37,6 +37,19 @@ namespace Monopoly.Game
             DontDestroyOnLoad(dev.gameObject);
         }
 
+        private float fpsTimer;
+        private int fpsFrames;
+
+        private void Update()
+        {
+            fpsFrames++;
+            fpsTimer += Time.unscaledDeltaTime;
+            if (fpsTimer < 10f) return;
+            Debug.Log($"[DevAutoplay] fps={fpsFrames / fpsTimer:0.0}");
+            fpsFrames = 0;
+            fpsTimer = 0;
+        }
+
         private IEnumerator Start()
         {
             yield return new WaitForSeconds(1.5f);
@@ -88,13 +101,21 @@ namespace Monopoly.Game
             yield return null;
 
             // Play the human seats through the normal UI request path, capturing key dialogs once.
-            bool deedShot = false, cardShot = false, manageShot = false, soldShot = false;
+            bool deedShot = false, cardShot = false, manageShot = false, soldShot = false, auctionShot = false;
+            bool declineNext = true;
             float end = Time.realtimeSinceStartup + 150f;
             Time.timeScale = 2f;
-            while (Time.realtimeSinceStartup < end && !flow.Game.IsOver && !(deedShot && cardShot && manageShot))
+            while (Time.realtimeSinceStartup < end && !flow.Game.IsOver && !(deedShot && cardShot && manageShot && auctionShot))
             {
                 if (!deedShot && hud.IsDeedVisible) { deedShot = true; Time.timeScale = 1f; yield return new WaitForSeconds(0.5f); Shot("07-buy-prompt"); yield return null; Time.timeScale = 2f; }
                 if (!cardShot && hud.IsCardVisible) { cardShot = true; yield return new WaitForSeconds(0.4f); Shot("08-card"); yield return null; }
+                if (!auctionShot && hud.IsAuctionVisible && flow.Game.Auction != null && flow.Game.Auction.HighBidder >= 0)
+                {
+                    auctionShot = true;
+                    yield return new WaitForSeconds(0.5f);
+                    Shot("08b-auction");
+                    yield return null;
+                }
                 hud.DismissCard();
                 if (flow.CanLocalAct)
                 {
@@ -130,9 +151,21 @@ namespace Monopoly.Game
                         Shot("09d-log");
                         yield return null;
                         hud.CloseDialogs();
+                        yield return new WaitForSeconds(0.3f);
+                        hud.ShowSettings();
+                        yield return new WaitForSeconds(0.6f);
+                        Shot("09e-settings");
+                        yield return null;
+                        hud.CloseDialogs();
                         yield return new WaitForSeconds(0.4f);
                     }
                     var cmd = CpuPlayer.ChooseCommand(flow.Game);
+                    // Pass on the first property we could buy, to see an auction.
+                    if (declineNext && cmd.Type == CommandType.Buy)
+                    {
+                        declineNext = false;
+                        cmd = new GameCommand(CommandType.Decline);
+                    }
                     flow.Request(cmd);
                     if (!soldShot && cmd.Type == CommandType.Buy)
                     {

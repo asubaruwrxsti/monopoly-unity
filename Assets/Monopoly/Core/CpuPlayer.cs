@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 
 namespace Monopoly.Core
@@ -36,6 +37,29 @@ namespace Monopoly.Core
             return gained >= given * 1.15f + 10f;
         }
 
+        /// <summary>
+        /// Bids in sensible jumps up to what the property is worth to this CPU: list price, more if it completes
+        /// one of its sets or blocks someone else's, less when cash is tight.
+        /// </summary>
+        public static GameCommand AuctionMove(MonopolyGame game)
+        {
+            var a = game.Auction;
+            var me = game.Players[a.CurrentBidder];
+            var def = BoardLayout.Spaces[a.Space];
+            var group = BoardLayout.SpacesInGroup(def.Group);
+            int mine = game.CountOwnedInGroup(me.Id, def.Group);
+            bool completesMine = mine == group.Count - 1;
+            bool blocksRival = group.Any(i => i != a.Space && game.GetProperty(i).IsOwned && game.GetProperty(i).Owner != me.Id
+                                              && game.CountOwnedInGroup(game.GetProperty(i).Owner, def.Group) == group.Count - 1);
+            float worth = def.Price * (completesMine ? 1.6f : blocksRival ? 1.25f : mine > 0 ? 1.1f : 0.9f);
+            int ceiling = Math.Min((int)worth, me.Money - Reserve / 2);
+
+            int step = Math.Max(AuctionState.MinimumBid, (def.Price / 10) / 5 * 5);
+            int bid = a.HighBidder < 0 ? Math.Max(AuctionState.MinimumBid, def.Price / 2) : a.HighBid + step;
+            if (bid > ceiling) return new GameCommand(CommandType.AuctionPass);
+            return GameCommand.Bid(bid);
+        }
+
         public static GameCommand ChooseCommand(MonopolyGame game)
         {
             var me = game.CurrentPlayer;
@@ -63,6 +87,9 @@ namespace Monopoly.Core
                                        .ThenBy(i => BoardLayout.Spaces[i].MortgageValue).DefaultIfEmpty(-1).First();
                     if (mortgage >= 0) return new GameCommand(CommandType.Mortgage, mortgage);
                     return new GameCommand(CommandType.DeclareBankruptcy);
+
+                case TurnPhase.AwaitingAuctionBid:
+                    return AuctionMove(game);
 
                 case TurnPhase.AwaitingTradeResponse:
                     return new GameCommand(WouldAccept(game, game.PendingTrade) ? CommandType.AcceptTrade : CommandType.RejectTrade);

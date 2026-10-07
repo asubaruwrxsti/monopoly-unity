@@ -34,6 +34,13 @@ namespace Monopoly.Tests
             return list;
         }
 
+        private static void DeclineAndNobodyBids(MonopolyGame game)
+        {
+            game.DeclinePendingProperty();
+            while (game.Phase == TurnPhase.AwaitingAuctionBid) game.PassAuction();
+            Drain(game);
+        }
+
         private static void PutCardOnTop(MonopolyGame game, CardDeck deck, CardAction action)
         {
             var pile = game.DeckFor(deck);
@@ -150,13 +157,13 @@ namespace Monopoly.Tests
             for (int turn = 0; turn < 2; turn++)
             {
                 game.EndTurn(); Drain(game);
-                Roll(game, 1, 2); game.DeclinePendingProperty(); Drain(game); // P2 moves along
+                Roll(game, 1, 2); DeclineAndNobodyBids(game); // P2 moves along
                 game.EndTurn(); Drain(game);
                 Roll(game, 1, 2);
                 Assert.IsTrue(game.Players[0].InJail);
             }
             game.EndTurn(); Drain(game);
-            Roll(game, 4, 1); if (game.Phase == TurnPhase.AwaitingBuyDecision) game.DeclinePendingProperty();
+            Roll(game, 4, 1); if (game.Phase == TurnPhase.AwaitingBuyDecision) DeclineAndNobodyBids(game);
             game.EndTurn(); Drain(game);
 
             Roll(game, 1, 2);
@@ -382,6 +389,40 @@ namespace Monopoly.Tests
             game.SetOwner(39, 1);
             Assert.IsFalse(CpuPlayer.WouldAccept(game, new TradeOffer(0, 1, new int[0], new[] { 39 }, 450, 0)));
             Assert.IsTrue(CpuPlayer.WouldAccept(game, new TradeOffer(0, 1, new int[0], new[] { 39 }, 1300, 0)));
+        }
+
+        [Test]
+        public void Declined_property_is_auctioned_to_the_highest_bidder()
+        {
+            var game = NewGame(3);
+            Roll(game, 1, 2); // P1 lands on Whitechapel Road ($60)
+            game.DeclinePendingProperty();
+            Assert.AreEqual(TurnPhase.AwaitingAuctionBid, game.Phase);
+            Assert.AreEqual(1, game.ActingPlayerIndex, "Bidding starts with the next player");
+
+            Assert.IsFalse(game.CanBid(5), "Below the minimum bid");
+            game.Bid(20);                    // P2
+            Assert.AreEqual(2, game.ActingPlayerIndex);
+            Assert.IsFalse(game.CanBid(20), "Must beat the high bid");
+            game.Bid(35);                    // P3
+            game.PassAuction();              // P1 (who declined) drops out
+            game.Bid(40);                    // P2
+            game.PassAuction();              // P3 drops out: P2 wins
+
+            Assert.AreEqual(1, game.GetProperty(3).Owner);
+            Assert.AreEqual(1460, game.Players[1].Money);
+            Assert.AreEqual(TurnPhase.AwaitingEndTurn, game.Phase);
+            Assert.AreEqual(0, game.CurrentPlayerIndex, "Still the landing player's turn");
+        }
+
+        [Test]
+        public void Auction_with_no_bids_leaves_property_with_the_bank()
+        {
+            var game = NewGame(2);
+            Roll(game, 1, 2);
+            DeclineAndNobodyBids(game);
+            Assert.IsFalse(game.GetProperty(3).IsOwned);
+            Assert.AreEqual(TurnPhase.AwaitingEndTurn, game.Phase);
         }
 
         [Test]

@@ -1020,3 +1020,127 @@ Label {
 .mobile .corner-right {
     bottom: 18px;
 }
+
+/* ---------------------------------------------------------------- auction */
+.auction {
+    width: 900px;
+}
+
+.auction__title {
+    font-size: 54px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    color: rgb(214, 38, 46);
+    -unity-text-align: middle-center;
+    letter-spacing: 6px;
+    margin-bottom: 8px;
+}
+
+.auction__body {
+    flex-direction: row;
+    margin-bottom: 12px;
+}
+
+.auction__image {
+    width: 200px;
+    height: 300px;
+    -unity-background-scale-mode: scale-to-fit;
+    margin-right: 24px;
+    rotate: -3deg;
+}
+
+.auction__info {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+.auction__high {
+    font-size: 64px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    color: var(--green-dark);
+}
+
+.auction__bidders {
+    flex-direction: row;
+    margin: 8px 0;
+}
+
+.auction__bidder {
+    width: 58px;
+    height: 58px;
+    border-radius: 29px;
+    border-width: 4px;
+    margin-right: 8px;
+    background-color: var(--paper-dim);
+    -unity-background-scale-mode: scale-to-fit;
+    opacity: 0.55;
+}
+
+.auction__bidder.current {
+    opacity: 1;
+    scale: 1.15 1.15;
+}
+
+.auction__bidder.out {
+    opacity: 0.15;
+}
+
+.auction__turn {
+    font-size: 22px;
+    -unity-font-definition: url("project://database/Assets/Resources/Fonts/KabelUltra.ttf");
+    color: var(--navy);
+    white-space: normal;
+}
+
+/* ---------------------------------------------------------------- settings */
+.settings {
+    width: 860px;
+    max-height: 92%;
+}
+
+.settings-list {
+    flex-shrink: 1;
+    margin-bottom: 12px;
+}
+
+.settings-section {
+    font-size: 15px;
+    color: var(--navy-soft);
+    letter-spacing: 2px;
+    margin: 14px 0 6px 0;
+}
+
+.settings-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    margin-bottom: 6px;
+    border-radius: 16px;
+    background-color: rgba(255, 255, 255, 0.55);
+}
+
+.settings-row__label {
+    font-size: 20px;
+    flex-shrink: 1;
+    white-space: normal;
+    margin-right: 12px;
+}
+
+.settings-row .segmented {
+    margin: 0;
+}
+
+.settings-row .segmented > .unity-button.btn {
+    flex-grow: 0;
+    flex-basis: auto;
+    min-width: 96px;
+    height: 46px;
+    font-size: 17px;
+    margin: 3px;
+}
+
+.mobile .settings-row .segmented > .unity-button.btn {
+    height: 56px;
+    min-width: 110px;
+    font-size: 19px;
+}

@@ -4,15 +4,16 @@ using UnityEngine.Rendering;
 namespace Monopoly.Game
 {
     /// <summary>
-    /// Captures the final 3D image every frame into a small, blurred, frosted texture. The HUD draws it behind
+    /// Captures the camera's 3D image every frame (before post-processing, from the camera's own render texture:
+    /// reading the backbuffer after effects is unreliable on Metal) into a small, blurred, frosted texture. The HUD draws it behind
     /// "glass" panels (positioned so it lines up with the screen) to fake a backdrop blur, which UI Toolkit
     /// doesn't support natively.
     /// </summary>
     [RequireComponent(typeof(Camera))]
     public sealed class BlurCapture : MonoBehaviour
     {
-        private const int Downsample = 4;
-        private const int Iterations = 3;
+        private static int Downsample => Application.isMobilePlatform ? 6 : 4;
+        private static int Iterations => Application.isMobilePlatform ? 2 : 3;
         private const float Frost = 0.62f;
 
         private static readonly int DirectionId = Shader.PropertyToID("_BlurDirection");
@@ -38,18 +39,19 @@ namespace Monopoly.Game
             }
             material = new Material(shader);
             buffer = new CommandBuffer { name = "Frosted UI blur" };
-            cam.AddCommandBuffer(CameraEvent.AfterImageEffects, buffer);
+            // Before PostProcessLayer's own buffer, so the source is the camera's intermediate colour texture.
+            cam.AddCommandBuffer(CameraEvent.BeforeImageEffects, buffer);
         }
 
         private void OnDisable()
         {
-            if (buffer != null) cam.RemoveCommandBuffer(CameraEvent.AfterImageEffects, buffer);
+            if (buffer != null) cam.RemoveCommandBuffer(CameraEvent.BeforeImageEffects, buffer);
             Release();
         }
 
         private void LateUpdate()
         {
-            var wanted = new Vector2Int(Mathf.Max(16, Screen.width / Downsample), Mathf.Max(16, Screen.height / Downsample));
+            var wanted = new Vector2Int(Mathf.Max(16, cam.pixelWidth / Downsample), Mathf.Max(16, cam.pixelHeight / Downsample));
             if (wanted == size && Texture != null) return;
             size = wanted;
             Release();

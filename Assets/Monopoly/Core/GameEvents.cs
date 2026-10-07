@@ -104,6 +104,30 @@ namespace Monopoly.Core
         public TradeResolvedEvent(TradeOffer offer, bool accepted) { Offer = offer; Accepted = accepted; }
     }
 
+    public sealed class AuctionStartedEvent : GameEvent
+    {
+        public int Space { get; }
+        public AuctionStartedEvent(int space) { Space = space; }
+    }
+
+    public sealed class AuctionBidEvent : GameEvent
+    {
+        public int PlayerId { get; }
+        /// <summary>The bid, or 0 when the player dropped out.</summary>
+        public int Amount { get; }
+        public bool Passed => Amount == 0;
+        public AuctionBidEvent(int playerId, int amount) { PlayerId = playerId; Amount = amount; }
+    }
+
+    public sealed class AuctionEndedEvent : GameEvent
+    {
+        public int Space { get; }
+        /// <summary>Winner's player id, or -1 if nobody bid.</summary>
+        public int Winner { get; }
+        public int Price { get; }
+        public AuctionEndedEvent(int space, int winner, int price) { Space = space; Winner = winner; Price = price; }
+    }
+
     public sealed class GameWonEvent : GameEvent
     {
         public int PlayerId { get; }

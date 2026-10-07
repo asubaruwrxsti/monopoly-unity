@@ -145,7 +145,8 @@ namespace Monopoly.Game
             roofMesh = MeshKit.Extrude(new[] { new Vector2(-0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 0.5f) }, 1f);
 
             float boardSize = HalfBoard * 2 + Rim * 2;
-            Box("Frame", new Vector3(0, -0.36f, 0), new Vector3(boardSize + 0.6f, 0.7f, boardSize + 0.6f), FrameColor, gloss: 0.5f);
+            // Each layer's top sits visibly below the next (frame -0.04, trim -0.01, board 0.01) so no faces are coplanar.
+            Box("Frame", new Vector3(0, -0.39f, 0), new Vector3(boardSize + 0.6f, 0.7f, boardSize + 0.6f), FrameColor, gloss: 0.5f);
             Box("Trim", new Vector3(0, -0.04f, 0), new Vector3(boardSize + 0.12f, 0.06f, boardSize + 0.12f), new Color32(232, 196, 92, 255), gloss: 0.8f, metallic: 0.6f);
             Box("Board", new Vector3(0, -0.02f, 0), new Vector3(boardSize, 0.06f, boardSize), BoardColor, solid: true);
 

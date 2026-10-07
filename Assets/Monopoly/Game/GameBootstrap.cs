@@ -30,17 +30,19 @@ namespace Monopoly.Game
         private void Awake()
         {
             Time.timeScale = 1f;
-            // Mobile defaults to 30 fps; the animations are made for 60.
-            Application.targetFrameRate = 60;
             // Physics only runs on demand: the dice simulate their throw ahead of time and replay it.
             Physics.simulationMode = SimulationMode.Script;
             Physics.gravity = new Vector3(0, -16f, 0);
             boardCamera = EnsureSceneBasics();
             board = BoardView.Create(transform);
             Scenery.Build(transform);
+            // Scenery sets up lighting; the player's saved settings then decide quality, blur, audio and frame rate.
+            GameSettings.Load();
+            GameSettings.Apply();
             dice = DiceView.Create(board.transform);
             fx = Effects.Create(board.transform);
             hud = HudController.Create(transform, this);
+            BoardCamera.IsInputBlocked = pos => hud.IsBlockingBoardClicks || hud.IsPointerOverUI(pos);
             flow = gameObject.AddComponent<GameFlow>();
             hud.ShowMainMenu();
             boardCamera.Orbit(snap: true);

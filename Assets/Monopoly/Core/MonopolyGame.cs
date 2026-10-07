@@ -41,7 +41,13 @@ namespace Monopoly.Core
         /// The player whose decision the game is waiting for: normally the current player, but the trade partner
         /// while a trade offer is pending.
         /// </summary>
-        public int ActingPlayerIndex => Phase == TurnPhase.AwaitingTradeResponse ? PendingTrade.To : CurrentPlayerIndex;
+        public int ActingPlayerIndex =>
+            Phase == TurnPhase.AwaitingTradeResponse ? PendingTrade.To :
+            Phase == TurnPhase.AwaitingAuctionBid ? Auction.CurrentBidder :
+            CurrentPlayerIndex;
+
+        /// <summary>The auction in progress, or null.</summary>
+        public AuctionState Auction { get; private set; }
 
         /// <param name="seed">Seed for dice and card shuffles; null for a random game.</param>
         /// <param name="rollDie">Optional dice override returning 1-6 (used by tests).</param>
@@ -383,11 +389,74 @@ namespace Monopoly.Core
             FinishResolution();
         }
 
+        /// <summary>Declining a property puts it up for auction among every player still in the game.</summary>
         public void DeclinePendingProperty()
         {
             Require(Phase == TurnPhase.AwaitingBuyDecision, "Nothing to decline.");
-            Log($"{CurrentPlayer.Name} decided not to buy {BoardLayout.Spaces[PendingPurchase].Name}.");
+            int space = PendingPurchase;
+            Log($"{CurrentPlayer.Name} passed on {BoardLayout.Spaces[space].Name}. It goes to auction!", true);
             PendingPurchase = -1;
+
+            // Bidding starts with the next player and comes round to the one who declined last.
+            var bidders = new List<int>();
+            for (int k = 1; k <= players.Count; k++)
+            {
+                var p = players[(CurrentPlayerIndex + k) % players.Count];
+                if (!p.IsBankrupt) bidders.Add(p.Id);
+            }
+            Auction = new AuctionState(space, bidders);
+            Phase = TurnPhase.AwaitingAuctionBid;
+            Emit(new AuctionStartedEvent(space));
+        }
+
+        public bool CanBid(int amount) => Phase == TurnPhase.AwaitingAuctionBid && amount >= Auction.NextMinimumBid
+                                          && amount <= players[Auction.CurrentBidder].Money;
+
+        public void Bid(int amount)
+        {
+            Require(CanBid(amount), "That bid isn't valid.");
+            var bidder = players[Auction.CurrentBidder];
+            Auction.HighBid = amount;
+            Auction.HighBidder = bidder.Id;
+            Emit(new AuctionBidEvent(bidder.Id, amount));
+            Log($"{bidder.Name} bids ${amount}.");
+            if (Auction.Bidders.Count == 1) EndAuction();
+            else Auction.Turn = (Auction.Turn + 1) % Auction.Bidders.Count;
+        }
+
+        public void PassAuction()
+        {
+            Require(Phase == TurnPhase.AwaitingAuctionBid, "No auction is running.");
+            var bidder = players[Auction.CurrentBidder];
+            Auction.Bidders.RemoveAt(Auction.Turn);
+            Emit(new AuctionBidEvent(bidder.Id, 0));
+            Log($"{bidder.Name} drops out of the auction.");
+            if (Auction.Turn >= Auction.Bidders.Count) Auction.Turn = 0;
+
+            bool onlyHighBidderLeft = Auction.Bidders.Count == 1 && Auction.Bidders[0] == Auction.HighBidder;
+            if (Auction.Bidders.Count == 0 || onlyHighBidderLeft) EndAuction();
+        }
+
+        private void EndAuction()
+        {
+            var a = Auction;
+            Auction = null;
+            var def = BoardLayout.Spaces[a.Space];
+            if (a.HighBidder >= 0)
+            {
+                var winner = players[a.HighBidder];
+                Transfer(winner, a.HighBid, null);
+                properties[a.Space].Owner = winner.Id;
+                Emit(new PropertyBoughtEvent(winner.Id, a.Space));
+                Log($"{winner.Name} won the auction for {def.Name} at ${a.HighBid}.", true);
+            }
+            else
+            {
+                Log($"Nobody bid. {def.Name} stays with the bank.", true);
+            }
+            Emit(new AuctionEndedEvent(a.Space, a.HighBidder, a.HighBid));
+            // Back to the landing player's turn (doubles, debts...).
+            Phase = TurnPhase.AwaitingEndTurn;
             FinishResolution();
         }
 
@@ -756,6 +825,7 @@ namespace Monopoly.Core
 
                 Mix((int)Phase); Mix(CurrentPlayerIndex); Mix(Die1); Mix(Die2); Mix(PendingPurchase); Mix(DebtTotal);
                 Mix(PendingTrade != null ? PendingTrade.To * 1000 + PendingTrade.GiveCash + PendingTrade.GetCash : -1);
+                Mix(Auction != null ? Auction.HighBid * 100 + Auction.HighBidder * 10 + Auction.Bidders.Count + Auction.Turn * 7 : -1);
                 foreach (var p in players)
                 {
                     Mix(p.Money); Mix(p.Position); Mix(p.InJail ? 1 : 0); Mix(p.JailAttempts);

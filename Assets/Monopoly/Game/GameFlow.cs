@@ -14,7 +14,6 @@ namespace Monopoly.Game
     /// </summary>
     public sealed class GameFlow : MonoBehaviour
     {
-        [SerializeField] private float cpuDelay = 0.6f;
         [SerializeField] private float secondsPerSpace = 0.28f;
 
         /// <summary>Tokens are shrunk on the board so up to six fit on one space.</summary>
@@ -72,6 +71,7 @@ namespace Monopoly.Game
             dice = diceView;
             fx = effects;
             cam = director.GetComponent<Camera>();
+            boardCamera.AllowManualControl = true;
             Game = new MonopolyGame(SeatRules.ToPlayerSetup(seats), seed);
 
             tokens = new TokenView[seats.Count];
@@ -91,13 +91,21 @@ namespace Monopoly.Game
                 net.SeatsChanged += OnSeatsChanged;
             }
 
+            Time.timeScale = GameSettings.GameSpeed;
+            GameSettings.Changed += OnSettingsChanged;
             hud.BeginGame(this);
             StartCoroutine(Intro());
             StartCoroutine(Loop());
         }
 
+        private void OnSettingsChanged()
+        {
+            if (Game != null) Time.timeScale = GameSettings.GameSpeed;
+        }
+
         private void OnDestroy()
         {
+            GameSettings.Changed -= OnSettingsChanged;
             if (net == null) return;
             net.RequestReceived -= OnRemoteRequest;
             net.CommandReceived -= OnHostCommand;
@@ -262,7 +270,9 @@ namespace Monopoly.Game
                 else if (IsAuthority && seats[Game.ActingPlayerIndex].Kind == SeatKind.Cpu)
                 {
                     cpuTimer += Time.deltaTime;
-                    if (cpuTimer >= cpuDelay)
+                    // CPUs bid in auctions a little quicker than they take other decisions.
+                    float delay = GameSettings.CpuDelay * (Game.Phase == TurnPhase.AwaitingAuctionBid ? 0.6f : 1f);
+                    if (cpuTimer >= delay)
                     {
                         cpuTimer = 0;
                         Authorize(CpuPlayer.ChooseCommand(Game), LocalId, fromCpu: true);
@@ -282,7 +292,7 @@ namespace Monopoly.Game
             switch (e)
             {
                 case TurnStartedEvent turn:
-                    boardCamera.ClearUserOffsets();
+                    boardCamera.OnDirectorCue();
                     for (int i = 0; i < tokens.Length; i++) tokens[i].SetHighlighted(i == turn.PlayerId);
                     FollowPlayer(turn.PlayerId, 1.15f);
                     if (LocalControlsSeat(turn.PlayerId))
@@ -319,6 +329,25 @@ namespace Monopoly.Game
                 case TradeProposedEvent proposed:
                     hud.ShowToast($"{Game.Players[proposed.Offer.From].Name} offers {Game.Players[proposed.Offer.To].Name} a trade");
                     Sfx.Play(SfxKind.Card);
+                    break;
+
+                case AuctionStartedEvent auction:
+                    hud.Announce("AUCTION!", BoardLayout.Spaces[auction.Space].Name, 1.2f);
+                    Sfx.Play(SfxKind.Card);
+                    yield return new WaitForSeconds(0.4f);
+                    break;
+
+                case AuctionBidEvent bid:
+                    if (bid.Passed) hud.ShowToast($"{Game.Players[bid.PlayerId].Name} drops out");
+                    else
+                    {
+                        hud.ShowToast($"{Game.Players[bid.PlayerId].Name} bids ${bid.Amount}");
+                        Sfx.Play(SfxKind.Coin, 0.6f);
+                    }
+                    break;
+
+                case AuctionEndedEvent ended:
+                    if (ended.Winner < 0) hud.ShowToast($"No bids. {BoardLayout.Spaces[ended.Space].Name} stays with the bank.");
                     break;
 
                 case TradeResolvedEvent resolved:
@@ -375,7 +404,7 @@ namespace Monopoly.Game
             Vector3 from = tokenPos + Vector3.up * 1.2f - inward * 0.6f;
             float yaw = BoardCamera.SideYaw(Game.Players[roll.PlayerId].Position);
 
-            boardCamera.ClearUserOffsets();
+            boardCamera.OnDirectorCue();
             boardCamera.Focus(Vector3.Lerp(tokenPos, landing, 0.6f), yaw, 6.2f, 52f);
             yield return dice.Throw(roll.Die1, roll.Die2, from, landing, () => boardCamera.Shake(0.12f));
             bool doubles = roll.Die1 == roll.Die2;

@@ -14,6 +14,8 @@ namespace Monopoly.Core
         AwaitingEndTurn,
         /// <summary>The current player offered a trade; <see cref="MonopolyGame.ActingPlayerIndex"/> must accept or reject it.</summary>
         AwaitingTradeResponse,
+        /// <summary>A declined property is being auctioned; <see cref="MonopolyGame.ActingPlayerIndex"/> must bid or pass.</summary>
+        AwaitingAuctionBid,
         GameOver,
     }
 
@@ -62,6 +64,29 @@ namespace Monopoly.Core
 
         public bool IsOwned => Owner != Unowned;
         public bool HasHotel => Houses == BoardLayout.HotelLevel;
+    }
+
+    /// <summary>An open auction for a property the landing player declined.</summary>
+    public sealed class AuctionState
+    {
+        public const int MinimumBid = 10;
+
+        public int Space { get; }
+        public int HighBid { get; internal set; }
+        /// <summary>Player id of the highest bidder, or -1 if nobody has bid yet.</summary>
+        public int HighBidder { get; internal set; } = -1;
+        /// <summary>Players still in the auction, in bidding order.</summary>
+        public List<int> Bidders { get; }
+        internal int Turn;
+
+        public int CurrentBidder => Bidders[Turn];
+        public int NextMinimumBid => HighBidder < 0 ? MinimumBid : HighBid + 1;
+
+        public AuctionState(int space, List<int> bidders)
+        {
+            Space = space;
+            Bidders = bidders;
+        }
     }
 
     public sealed class Debt

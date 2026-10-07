@@ -47,10 +47,7 @@ namespace Monopoly.Game
             RenderSettings.fogColor = new Color(0.7f, 0.82f, 0.92f);
             RenderSettings.fogDensity = 0.012f;
 
-            QualitySettings.shadowDistance = 60f;
-            QualitySettings.shadowResolution = ShadowResolution.VeryHigh;
-            QualitySettings.shadowCascades = 2;
-            QualitySettings.antiAliasing = 4;
+            // Shadow and anti-aliasing quality come from GameSettings.
             QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
 
             // Ground and plinth.

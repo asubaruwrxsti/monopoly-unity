@@ -428,6 +428,7 @@ namespace Monopoly.Game
         {
             w.WriteValueSafe((byte)cmd.Type);
             w.WriteValueSafe(cmd.Space);
+            w.WriteValueSafe(cmd.Amount);
             bool hasOffer = cmd.Offer != null;
             w.WriteValueSafe(hasOffer);
             if (!hasOffer) return;
@@ -444,15 +445,16 @@ namespace Monopoly.Game
         {
             r.ReadValueSafe(out byte type);
             r.ReadValueSafe(out int space);
+            r.ReadValueSafe(out int amount);
             r.ReadValueSafe(out bool hasOffer);
-            if (!hasOffer) return new GameCommand((CommandType)type, space);
+            if (!hasOffer) return new GameCommand((CommandType)type, space, null, amount);
             r.ReadValueSafe(out int from);
             r.ReadValueSafe(out int to);
             r.ReadValueSafe(out int giveCash);
             r.ReadValueSafe(out int getCash);
             var give = ReadSpaces(ref r);
             var get = ReadSpaces(ref r);
-            return new GameCommand((CommandType)type, space, new TradeOffer(from, to, give, get, giveCash, getCash));
+            return new GameCommand((CommandType)type, space, new TradeOffer(from, to, give, get, giveCash, getCash), amount);
         }
 
         private static void WriteSpaces(ref FastBufferWriter w, IReadOnlyList<int> spaces)
