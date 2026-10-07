@@ -19,6 +19,9 @@ namespace Monopoly.Editor
     public static class MonopolySetup
     {
         public const string ScenePath = "Assets/Scenes/Monopoly.unity";
+        public const string BundleId = "com.arlind12344.monopoly";
+        /// <summary>Arlind Ismalaja (Personal Team), arlind12344@gmail.com. Override with -teamId.</summary>
+        private const string DefaultTeamId = "7F6CU26478";
         private const string ResourceFolder = "Assets/Resources/Monopoly";
         private const string SettingsFolder = "Assets/Monopoly/Settings";
         private const string HeroFolder = "Assets/RPG Tiny Hero Duo";
@@ -237,14 +240,13 @@ namespace Monopoly.Editor
             var ios = NamedBuildTarget.iOS;
             PlayerSettings.companyName = "Arlind Ismalaja";
             PlayerSettings.productName = "Monopoly";
-            PlayerSettings.SetApplicationIdentifier(ios, "com.arlindismalaja.monopoly");
+            PlayerSettings.SetApplicationIdentifier(ios, BundleId);
             PlayerSettings.bundleVersion = "1.0";
             PlayerSettings.iOS.buildNumber = "1";
             PlayerSettings.iOS.targetOSVersionString = "15.0";
             PlayerSettings.iOS.targetDevice = iOSTargetDevice.iPhoneAndiPad;
             PlayerSettings.iOS.appleEnableAutomaticSigning = true;
-            string team = Arg("-teamId");
-            if (!string.IsNullOrEmpty(team)) PlayerSettings.iOS.appleDeveloperTeamID = team;
+            PlayerSettings.iOS.appleDeveloperTeamID = Arg("-teamId") ?? DefaultTeamId;
             PlayerSettings.SetManagedStrippingLevel(ios, ManagedStrippingLevel.Minimal);
             PlayerSettings.statusBarHidden = true;
 

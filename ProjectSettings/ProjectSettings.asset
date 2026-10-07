@@ -166,7 +166,7 @@ PlayerSettings:
   androidMinAspectRatio: 1
   applicationIdentifier:
     Standalone: com.DefaultCompany.3D-Project
-    iPhone: com.arlindismalaja.monopoly
+    iPhone: com.arlind12344.monopoly
   buildNumber:
     Standalone: 0
     VisionOS: 0
@@ -241,7 +241,7 @@ PlayerSettings:
   metalCompileShaderBinary: 0
   iOSRenderExtraFrameOnPause: 0
   iosCopyPluginsCodeInsteadOfSymlink: 0
-  appleDeveloperTeamID: 8T8X6GLWHA
+  appleDeveloperTeamID: 7F6CU26478
   iOSManualSigningProvisioningProfileID: 
   tvOSManualSigningProvisioningProfileID: 
   VisionOSManualSigningProvisioningProfileID: 
