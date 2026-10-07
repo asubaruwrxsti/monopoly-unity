@@ -178,6 +178,7 @@ namespace Monopoly.Game
             connectError = Q<Label>("connect-error");
             modeOnlineBtn = Btn("mode-online-btn", () => SetConnectMode(lan: false));
             modeLanBtn = Btn("mode-lan-btn", () => SetConnectMode(lan: true));
+            SetVisible(modeLanBtn.parent, NetSession.SupportsLan);
             Btn("connect-back-btn", ShowMainMenu);
             connectGoBtn = Btn("connect-go-btn", () =>
             {

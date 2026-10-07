@@ -63,3 +63,6 @@ Thumbs.db
 # Plastic SCM
 .plastic/
 
+
+# Unity Android build scratch files
+.utmp/

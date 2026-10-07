@@ -235,6 +235,49 @@ namespace Monopoly.Editor
             Build(BuildTarget.iOS, "Builds/iOS");
         }
 
+        /// <summary>
+        /// Builds an installable APK (debug-signed, for sideloading). Command line:
+        /// -buildTarget Android -executeMethod Monopoly.Editor.MonopolySetup.BuildAndroid -buildPath &lt;file.apk&gt;
+        /// </summary>
+        [MenuItem("Monopoly/Build Android (APK)")]
+        public static void BuildAndroid()
+        {
+            ConfigureMobile();
+            var android = NamedBuildTarget.Android;
+            PlayerSettings.SetApplicationIdentifier(android, BundleId);
+            PlayerSettings.Android.bundleVersionCode = 1;
+            PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel26;
+            PlayerSettings.SetScriptingBackend(android, ScriptingImplementation.IL2CPP);
+            PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+            PlayerSettings.SetManagedStrippingLevel(android, ManagedStrippingLevel.Minimal);
+            PlayerSettings.Android.forceInternetPermission = true;
+            EditorUserBuildSettings.buildAppBundle = false;
+            AssetDatabase.SaveAssets();
+            Build(BuildTarget.Android, "Builds/Monopoly.apk");
+        }
+
+        /// <summary>
+        /// Builds the browser version into a folder you can upload to any static host. Command line:
+        /// -buildTarget WebGL -executeMethod Monopoly.Editor.MonopolySetup.BuildWebGL -buildPath &lt;folder&gt;
+        /// </summary>
+        [MenuItem("Monopoly/Build Web (WebGL)")]
+        public static void BuildWebGL()
+        {
+            var web = NamedBuildTarget.WebGL;
+            PlayerSettings.companyName = "Arlind Ismalaja";
+            PlayerSettings.productName = "Monopoly";
+            PlayerSettings.WebGL.template = "PROJECT:Monopoly";
+            // Gzip plus the JavaScript fallback works on hosts that don't send Content-Encoding headers.
+            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
+            PlayerSettings.WebGL.decompressionFallback = true;
+            PlayerSettings.WebGL.dataCaching = true;
+            PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.ExplicitlyThrownExceptionsOnly;
+            PlayerSettings.SetManagedStrippingLevel(web, ManagedStrippingLevel.Minimal);
+            PlayerSettings.runInBackground = true;
+            AssetDatabase.SaveAssets();
+            Build(BuildTarget.WebGL, "Builds/Web");
+        }
+
         /// <summary>Player settings for phones: landscape only, readable on small screens, signed for your team.</summary>
         public static void ConfigureMobile()
         {

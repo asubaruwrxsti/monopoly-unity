@@ -13,7 +13,8 @@ namespace Monopoly.Game
     {
         private const string Prefix = "monopoly.settings.";
 
-        public static GraphicsQuality Quality = Application.isMobilePlatform ? GraphicsQuality.Medium : GraphicsQuality.High;
+        public static GraphicsQuality Quality = Application.isMobilePlatform || Application.platform == RuntimePlatform.WebGLPlayer
+            ? GraphicsQuality.Medium : GraphicsQuality.High;
         /// <summary>Frosted-glass panels (a blurred copy of the 3D scene behind the UI).</summary>
         public static bool Blur = true;
         public static int FrameRate = 60;

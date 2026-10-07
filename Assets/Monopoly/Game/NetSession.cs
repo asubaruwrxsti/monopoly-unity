@@ -67,7 +67,10 @@ namespace Monopoly.Game
             localName = playerName;
             await SignInAsync();
             CreateNetworkManager();
-            var options = new SessionOptions { MaxPlayers = SeatRules.MaxSeats, IsPrivate = true }.WithRelayNetwork();
+            transport.UseWebSockets = true;
+            var options = new SessionOptions { MaxPlayers = SeatRules.MaxSeats, IsPrivate = true }
+                .WithRelayNetwork()
+                .WithNetworkOptions(WebSocketRelay());
             session = await MultiplayerService.Instance.CreateSessionAsync(options);
             JoinCode = session.Code;
             BecomeHost();
@@ -78,9 +81,20 @@ namespace Monopoly.Game
             localName = playerName;
             await SignInAsync();
             CreateNetworkManager();
-            session = await MultiplayerService.Instance.JoinSessionByCodeAsync(code.Trim().ToUpperInvariant());
+            transport.UseWebSockets = true;
+            session = await MultiplayerService.Instance.JoinSessionByCodeAsync(code.Trim().ToUpperInvariant(),
+                new JoinSessionOptions().WithNetworkOptions(WebSocketRelay()));
             JoinCode = session.Code;
         }
+
+        /// <summary>
+        /// Online games always go through Relay over secure WebSockets: browsers can't use anything else, and using
+        /// it everywhere lets phone, desktop and web players join the same game.
+        /// </summary>
+        private static NetworkOptions WebSocketRelay() => new NetworkOptions { RelayProtocol = RelayProtocol.WSS };
+
+        /// <summary>LAN play needs raw sockets, which browsers don't have.</summary>
+        public static bool SupportsLan => Application.platform != RuntimePlatform.WebGLPlayer;
 
         public void HostLan(string playerName, ushort port = DefaultPort)
         {
