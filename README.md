@@ -58,12 +58,12 @@ LAN mode works without this.
 ### Rules implemented
 
 Full classic rules: buying, rent (doubled on complete colour sets), stations and utilities, houses and hotels
-with even building, mortgages (10% interest to lift), all 32 Chance / Community Chest cards, Get Out of Jail Free
-cards, jail (fine, card, or doubles; forced fine on the third try), three doubles sends you to jail, income/luxury
-tax, raising money when you can't pay, and bankruptcy (assets go to the creditor).
+with even building and a 32-house/12-hotel bank supply, mortgages (10% interest to lift), all 32 Chance /
+Community Chest cards, Get Out of Jail Free cards, jail (fine, card, or doubles; forced fine on the third try),
+three doubles sends you to jail, income/luxury tax, raising money when you can't pay, and bankruptcy (assets go
+to the creditor).
 
-Not implemented: auctions (a declined property stays with the bank), trading between players, and the bank's
-limited supply of houses/hotels.
+Not implemented: auctions (a declined property stays with the bank), trading between players.
 
 ## Project layout
 
@@ -116,3 +116,11 @@ Unity -batchmode -quit -projectPath . -executeMethod Monopoly.Editor.MonopolySet
 
 `DevAutoplay` is a smoke-test driver that only activates when the player is launched with
 `-monopolyAutoplay <local|tokens|host|join> <screenshotDir>`.
+
+### GitHub Pages CI
+
+`.github/workflows/github-pages.yml` builds a WebGL player with
+[game-ci/unity-builder](https://game.ci/) on every push to `main` and publishes it to GitHub Pages. It needs a
+Unity license available as repository secrets: either `UNITY_LICENSE` (a Unity Personal/Pro `.ulf` license file)
+or `UNITY_EMAIL` + `UNITY_PASSWORD` (and `UNITY_SERIAL` for Pro). GitHub Pages must also be enabled for the
+repository with the source set to **GitHub Actions** (Settings > Pages).

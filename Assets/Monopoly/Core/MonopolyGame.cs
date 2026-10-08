@@ -90,6 +90,13 @@ namespace Monopoly.Core
         public int CountOwnedInGroup(int playerId, ColorGroup group)
             => BoardLayout.SpacesInGroup(group).Count(i => properties[i].Owner == playerId);
 
+        /// <summary>Houses currently placed on the board (a hotel does not count against this; its 4 houses return to the bank).</summary>
+        public int HousesInUse => properties.Where(p => p != null && p.Houses < BoardLayout.HotelLevel).Sum(p => p.Houses);
+        /// <summary>Hotels currently placed on the board.</summary>
+        public int HotelsInUse => properties.Count(p => p != null && p.HasHotel);
+        public int HousesAvailable => BoardLayout.HouseSupplyLimit - HousesInUse;
+        public int HotelsAvailable => BoardLayout.HotelSupplyLimit - HotelsInUse;
+
         /// <summary>Rent owed for landing on <paramref name="space"/> with the given dice total.</summary>
         public int CalculateRent(int space, int diceTotal)
         {
@@ -196,6 +203,9 @@ namespace Monopoly.Core
             if (!OwnsWholeGroup(p.Id, def.Group)) return false;
             var group = BoardLayout.SpacesInGroup(def.Group);
             if (group.Any(i => properties[i].Mortgaged)) return false;
+            // The bank has a finite supply of houses and hotels; a hotel build returns its 4 houses to the bank.
+            bool buildsHotel = st.Houses == BoardLayout.HotelLevel - 1;
+            if (buildsHotel ? HotelsAvailable <= 0 : HousesAvailable <= 0) return false;
             // Build evenly: only on a property with the fewest buildings in its group.
             return st.Houses == group.Min(i => properties[i].Houses);
         }
@@ -206,6 +216,8 @@ namespace Monopoly.Core
             var def = BoardLayout.Spaces[space];
             var st = properties[space];
             if (st.Houses == 0) return false;
+            // Selling a hotel breaks it back into 4 houses; the bank must have enough houses spare.
+            if (st.HasHotel && HousesAvailable < BoardLayout.HotelLevel - 1) return false;
             // Sell evenly: only from a property with the most buildings in its group.
             return st.Houses == BoardLayout.SpacesInGroup(def.Group).Max(i => properties[i].Houses);
         }

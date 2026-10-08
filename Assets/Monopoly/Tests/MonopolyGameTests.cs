@@ -192,6 +192,39 @@ namespace Monopoly.Tests
         }
 
         [Test]
+        public void BuildHouse_is_blocked_once_the_bank_runs_out_of_houses()
+        {
+            var game = NewGame();
+            // Pre-load 32 houses across three colour groups, exhausting the bank's house supply.
+            foreach (var space in new[] { 1, 3, 6, 8, 9, 11, 13, 14 })
+                game.SetOwner(space, 0, 4);
+            Assert.AreEqual(0, game.HousesAvailable);
+
+            game.SetOwner(16, 0);
+            game.SetOwner(18, 0);
+            game.SetOwner(19, 0);
+            Assert.IsFalse(game.CanBuildHouse(16), "Bank is out of houses");
+
+            game.SellHouse(1);
+            Assert.AreEqual(1, game.HousesAvailable);
+            Assert.IsTrue(game.CanBuildHouse(16));
+        }
+
+        [Test]
+        public void BuildHouse_is_blocked_once_the_bank_runs_out_of_hotels()
+        {
+            var game = NewGame();
+            // Pre-load 12 hotels, exhausting the bank's hotel supply.
+            foreach (var space in new[] { 1, 3, 6, 8, 9, 11, 13, 14, 16, 18, 19, 21 })
+                game.SetOwner(space, 0, BoardLayout.HotelLevel);
+            Assert.AreEqual(0, game.HotelsAvailable);
+
+            game.SetOwner(37, 0, 4);
+            game.SetOwner(39, 0, 4);
+            Assert.IsFalse(game.CanBuildHouse(37), "Bank is out of hotels");
+        }
+
+        [Test]
         public void Mortgage_and_unmortgage_move_money_with_interest()
         {
             var game = NewGame();
