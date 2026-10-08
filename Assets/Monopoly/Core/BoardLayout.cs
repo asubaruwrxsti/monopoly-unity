@@ -53,6 +53,10 @@ namespace Monopoly.Core
         public const int JailFine = 50;
         public const int StartingMoney = 1500;
         public const int HotelLevel = 5;
+        /// <summary>Total houses the bank has to lend out, matching the physical game's 32-piece supply.</summary>
+        public const int HouseSupplyLimit = 32;
+        /// <summary>Total hotels the bank has to lend out, matching the physical game's 12-piece supply.</summary>
+        public const int HotelSupplyLimit = 12;
 
         public static readonly int[] StationIndices = { 5, 15, 25, 35 };
         public static readonly int[] UtilityIndices = { 12, 28 };
